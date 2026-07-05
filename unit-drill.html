@@ -163,6 +163,28 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
 .hist-table tr:hover td{background:#f8fbff}
 .hist-pct{font-weight:bold}
 .hist-pct.high{color:#2e7d32}.hist-pct.mid{color:#f57c00}.hist-pct.low{color:#c62828}
+/* ===== Nickname bar (title screen) ===== */
+.nickname-bar{text-align:center;margin-bottom:16px;font-size:.95rem;color:#555}
+.nickname-bar span{font-weight:bold;color:#1a5f9e}
+.nickname-edit-btn{background:none;border:none;cursor:pointer;font-size:.9rem;
+  color:#888;padding:2px 6px;border-radius:6px;margin-left:4px}
+.nickname-edit-btn:hover{background:#f0f4ff;color:#1a5f9e}
+/* ===== Nickname modal ===== */
+.nickname-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;
+  display:flex;align-items:center;justify-content:center;padding:16px}
+.nickname-overlay.hidden{display:none}
+.nickname-modal{background:#fff;border-radius:20px;padding:28px 24px;max-width:360px;
+  width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18);text-align:center}
+.nickname-modal h2{font-size:1.3rem;color:#1a5f9e;margin-bottom:8px}
+.nickname-modal p{font-size:.9rem;color:#666;margin-bottom:18px;line-height:1.5}
+.nickname-input{width:100%;height:52px;font-size:1.3rem;text-align:center;
+  border:2.5px solid #adc8e8;border-radius:12px;outline:none;padding:0 10px;
+  font-family:inherit;margin-bottom:16px}
+.nickname-input:focus{border-color:#4da6f5;box-shadow:0 0 0 3px rgba(77,166,245,.2)}
+.nickname-ok-btn{width:100%;padding:14px;font-size:1.15rem;font-weight:bold;
+  background:linear-gradient(135deg,#ff9800,#f44336);color:#fff;border:none;
+  border-radius:14px;cursor:pointer;font-family:inherit}
+.nickname-ok-btn:active{transform:scale(.97)}
 /* ===== Responsive ===== */
 @media(max-width:520px){
   .unit-grid{grid-template-columns:1fr}
@@ -187,6 +209,11 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
     <div class="title-sub">小4レベル｜計算・単位変換・覆面算</div>
   </div>
 
+  <div class="nickname-bar" id="nicknameBar">
+    あだな：<span id="nicknameDisplay">（未設定）</span>
+    <button class="nickname-edit-btn" onclick="showNicknameModal(true)">✏️ 変更</button>
+  </div>
+
   <div class="title-theme-label">テーマを選ぼう</div>
   <div class="theme-bar" id="titleThemeBar">
     <button class="theme-btn active" data-theme="ぜんぶ">ぜんぶ</button>
@@ -208,6 +235,17 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
     <button class="title-btn btn-graph" onclick="showScreen('graph')">
       📊 きろく（グラフ）を見る
     </button>
+  </div>
+</div>
+
+<!-- ========== NICKNAME MODAL ========== -->
+<div class="nickname-overlay hidden" id="nicknameOverlay">
+  <div class="nickname-modal">
+    <h2>👤 あだなを入力してね</h2>
+    <p>同じあだなを使えば、<br>ちがう端末でも記録を引き継げるよ！</p>
+    <input class="nickname-input" id="nicknameInputField" type="text" maxlength="20"
+      placeholder="例：さくら" autocomplete="off">
+    <button class="nickname-ok-btn" onclick="confirmNickname()">決定 ✓</button>
   </div>
 </div>
 
@@ -867,24 +905,52 @@ async function showResult() {
 }
 
 // ===== Supabase + localStorage =====
-const SUPABASE_URL = 'https://jqtmibcnllvbpwvzxlea.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_9ATK4N1-amyEWwJiCVgOJA_wpQ5Anka';
-const STORAGE_KEY  = 'unitDrillRecords';
-const UID_KEY      = 'unitDrillUserId';
+const SUPABASE_URL  = 'https://jqtmibcnllvbpwvzxlea.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_9ATK4N1-amyEWwJiCVgOJA_wpQ5Anka';
+const STORAGE_KEY   = 'unitDrillRecords';
+const NICKNAME_KEY  = 'unitDrillNickname';
 
 let sbClient = null;
 try {
   sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 } catch(e) { console.warn('Supabase init failed', e); }
 
-function getUserId() {
-  let uid = localStorage.getItem(UID_KEY);
-  if (!uid) {
-    uid = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    localStorage.setItem(UID_KEY, uid);
-  }
-  return uid;
+// ===== Nickname =====
+function getNickname() {
+  return localStorage.getItem(NICKNAME_KEY) || '';
 }
+
+function updateNicknameBar() {
+  const nn = getNickname();
+  const el = document.getElementById('nicknameDisplay');
+  if (el) el.textContent = nn || '（未設定）';
+}
+
+function showNicknameModal(isChange) {
+  const overlay = document.getElementById('nicknameOverlay');
+  const inp = document.getElementById('nicknameInputField');
+  if (isChange) inp.value = getNickname();
+  else inp.value = '';
+  overlay.classList.remove('hidden');
+  setTimeout(() => inp.focus(), 50);
+}
+
+function confirmNickname() {
+  const inp = document.getElementById('nicknameInputField');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  localStorage.setItem(NICKNAME_KEY, name);
+  // ニックネームが変わったので古いローカル記録はクリア
+  localStorage.removeItem(STORAGE_KEY);
+  document.getElementById('nicknameOverlay').classList.add('hidden');
+  updateNicknameBar();
+}
+
+// 初回起動チェック
+window.addEventListener('DOMContentLoaded', () => {
+  updateNicknameBar();
+  if (!getNickname()) showNicknameModal(false);
+});
 
 // ローカルに保存（オフライン時のキャッシュ兼バックアップ）
 function saveLocal(rec) {
@@ -898,10 +964,11 @@ function saveLocal(rec) {
 async function saveRecord(pct) {
   const rec = { date: new Date().toISOString(), score: pct, theme: currentTheme };
   saveLocal(rec);
+  if (!getNickname()) return { ok: false, errMsg: 'あだな未設定（ローカルに保存しました）' };
   if (!sbClient) return { ok: false, errMsg: 'オフライン（ローカルに保存しました）' };
   try {
     const { error } = await sbClient.from('drill_records').insert({
-      user_id:   getUserId(),
+      user_id:   getNickname(),
       score:     pct,
       theme:     currentTheme,
       played_at: rec.date,
@@ -920,7 +987,7 @@ async function loadRecords() {
       const { data, error } = await sbClient
         .from('drill_records')
         .select('played_at, score, theme')
-        .eq('user_id', getUserId())
+        .eq('user_id', getNickname())
         .order('played_at', { ascending: true });
       if (!error && data && data.length > 0) {
         const local = data.map(r => ({ date: r.played_at, score: r.score, theme: r.theme }));
@@ -945,7 +1012,7 @@ async function clearRecords() {
   if (!confirm('記録をすべて消しますか？')) return;
   localStorage.removeItem(STORAGE_KEY);
   if (sbClient) {
-    try { await sbClient.from('drill_records').delete().eq('user_id', getUserId()); }
+    try { await sbClient.from('drill_records').delete().eq('user_id', getNickname()); }
     catch(e) { console.warn('Supabase delete failed', e); }
   }
   renderGraph();
