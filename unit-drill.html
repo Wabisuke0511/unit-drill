@@ -141,6 +141,28 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
 .btn-clear{background:#fff;border:2px solid #f44336;color:#f44336;
   border-radius:10px;padding:8px 18px;font-size:.9rem;font-weight:bold;cursor:pointer;margin-top:10px}
 
+/* ===== Quit button ===== */
+.quiz-header{display:flex;align-items:center;justify-content:space-between;
+  max-width:660px;margin:0 auto 10px;gap:12px}
+.quit-btn{padding:8px 16px;background:#fff;border:2px solid #e57373;border-radius:12px;
+  font-size:.95rem;font-weight:bold;color:#c62828;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.quit-btn:active{transform:scale(.96)}
+/* ===== Save status ===== */
+.save-status-wrap{margin-top:10px;min-height:28px;text-align:center}
+.save-status{font-size:.85rem;padding:5px 12px;border-radius:8px;display:inline-block}
+.save-ok{background:#e8f5e9;color:#2e7d32}
+.save-fail{background:#ffebee;color:#c62828;line-height:1.4}
+/* ===== History table ===== */
+.hist-section{margin-top:14px}
+.hist-title{font-size:1rem;font-weight:bold;color:#1a5f9e;margin-bottom:8px}
+.hist-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.hist-table th{background:#f0f4ff;color:#555;padding:7px 6px;text-align:left;
+  border-bottom:2px solid #dce8f8;font-weight:bold;white-space:nowrap}
+.hist-table td{padding:8px 6px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.hist-table tr:last-child td{border-bottom:none}
+.hist-table tr:hover td{background:#f8fbff}
+.hist-pct{font-weight:bold}
+.hist-pct.high{color:#2e7d32}.hist-pct.mid{color:#f57c00}.hist-pct.low{color:#c62828}
 /* ===== Responsive ===== */
 @media(max-width:520px){
   .unit-grid{grid-template-columns:1fr}
@@ -191,8 +213,11 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
 
 <!-- ========== QUIZ SCREEN ========== -->
 <div class="screen" id="screen-quiz">
-  <div class="progress-wrap">
+  <div class="quiz-header">
+    <button class="quit-btn" onclick="quitGame()">✕ やめる</button>
     <div class="progress-label" id="progressLabel"></div>
+  </div>
+  <div class="progress-wrap">
     <div class="progress-bar">
       <div class="progress-fill" id="progressFill" style="width:0%"></div>
     </div>
@@ -788,6 +813,12 @@ function normalizeNum(s) {
   return String(parseFloat(n.toPrecision(10)));
 }
 
+function quitGame() {
+  if (confirm('とちゅうでやめますか？\nきろくは保存されません。')) {
+    showScreen('title');
+  }
+}
+
 function nextQuestion() {
   answered = false;
   currentQ++;
@@ -797,7 +828,6 @@ function nextQuestion() {
 
 async function showResult() {
   const pct = Math.round(score / 10 * 100);
-  await saveRecord(pct);
 
   const emoji = pct >= 90 ? '🏆' : pct >= 70 ? '⭕' : pct >= 50 ? '△' : '💪';
   const msg = pct >= 90 ? 'すばらしい！完璧に近いです！' : pct >= 70 ? 'よくできました！' : pct >= 50 ? 'もう少しがんばろう！' : 'また練習しよう！くじけないで！';
@@ -817,11 +847,23 @@ async function showResult() {
       <div class="result-pct">${pct}%</div>
       <div class="result-msg">${msg}</div>
       ${listHTML}
+      <div class="save-status-wrap"><span style="font-size:.85rem;color:#aaa">きろくを保存中...</span></div>
       <div class="btn-row">
         <button class="btn btn-retry" onclick="startGame()">もう1回 ▶</button>
         <button class="btn btn-home" onclick="showScreen('title')">🏠 表紙にもどる</button>
       </div>
     </div>`;
+
+  // 保存して結果を表示
+  const saveResult = await saveRecord(pct);
+  const wrap = document.querySelector('.save-status-wrap');
+  if (wrap) {
+    if (saveResult.ok) {
+      wrap.innerHTML = '<span class="save-status save-ok">きろくを保存しました ✓</span>';
+    } else {
+      wrap.innerHTML = `<span class="save-status save-fail">きろくを保存できませんでした<br>（${saveResult.errMsg}）</span>`;
+    }
+  }
 }
 
 // ===== Supabase + localStorage =====
@@ -856,18 +898,23 @@ function saveLocal(rec) {
 async function saveRecord(pct) {
   const rec = { date: new Date().toISOString(), score: pct, theme: currentTheme };
   saveLocal(rec);
-  if (!sbClient) return;
+  if (!sbClient) return { ok: false, errMsg: 'オフライン（ローカルに保存しました）' };
   try {
-    await sbClient.from('drill_records').insert({
+    const { error } = await sbClient.from('drill_records').insert({
       user_id:   getUserId(),
       score:     pct,
       theme:     currentTheme,
       played_at: rec.date,
     });
-  } catch(e) { console.warn('Supabase save failed', e); }
+    if (error) return { ok: false, errMsg: error.message };
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, errMsg: e.message || 'ネットワークエラー' };
+  }
 }
 
 async function loadRecords() {
+  let sbError = null;
   if (sbClient) {
     try {
       const { data, error } = await sbClient
@@ -876,15 +923,22 @@ async function loadRecords() {
         .eq('user_id', getUserId())
         .order('played_at', { ascending: true });
       if (!error && data && data.length > 0) {
-        // クラウドのデータをローカルにも同期
         const local = data.map(r => ({ date: r.played_at, score: r.score, theme: r.theme }));
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(local)); } catch(e) {}
-        return local;
+        return { data: local, error: null, fallback: false };
       }
-    } catch(e) { console.warn('Supabase load failed', e); }
+      if (error) sbError = error.message;
+    } catch(e) { sbError = e.message || 'ネットワークエラー'; }
+  } else {
+    sbError = 'オフライン';
   }
-  // フォールバック: ローカルストレージ
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { return []; }
+  // ローカルにフォールバック
+  try {
+    const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    return { data: local, error: sbError, fallback: !!sbError };
+  } catch(e) {
+    return { data: [], error: sbError || 'データを読み込めませんでした', fallback: true };
+  }
 }
 
 async function clearRecords() {
@@ -901,11 +955,16 @@ async function clearRecords() {
 let chartInstance = null;
 
 async function renderGraph() {
-  const records = await loadRecords();
   const wrap = document.getElementById('graphWrap');
+  wrap.innerHTML = '<div class="graph-empty" style="color:#aaa">読み込み中...</div>';
+
+  const { data: records, error: loadError, fallback } = await loadRecords();
 
   if (records.length === 0) {
-    wrap.innerHTML = '<div class="graph-empty">まだ記録がありません。<br>スタートして問題を解くと<br>ここにグラフが表示されます。</div>';
+    const msg = loadError
+      ? `<span style="color:#c62828">読み込みエラー：${loadError}</span><br><small style="color:#888">ネットワークのじょうたいを確認してください</small>`
+      : 'まだ記録がありません。<br>スタートして問題を解くと<br>ここにグラフが表示されます。';
+    wrap.innerHTML = `<div class="graph-empty">${msg}</div>`;
     return;
   }
 
@@ -919,6 +978,25 @@ async function renderGraph() {
   });
   const data = records.map(r => r.score);
 
+  // 履歴テーブル（新しい順）
+  let histRows = '';
+  [...records].reverse().forEach(r => {
+    const d = new Date(r.date);
+    const dateStr = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const correct = Math.round(r.score / 10); // score=pct, 10問固定
+    const cls = r.score >= 80 ? 'high' : r.score >= 60 ? 'mid' : 'low';
+    histRows += `<tr>
+      <td>${dateStr}</td>
+      <td>${r.theme}</td>
+      <td>10問中 <strong>${correct}問</strong></td>
+      <td><span class="hist-pct ${cls}">${r.score}%</span></td>
+    </tr>`;
+  });
+
+  const fallbackNote = fallback
+    ? `<div style="text-align:center;font-size:.8rem;color:#f57c00;margin-top:8px">⚠ クラウドに接続できなかったため、このデバイスの記録を表示しています</div>`
+    : '';
+
   wrap.innerHTML = `
     <div class="graph-stats">
       <div class="stat-box"><div class="stat-val">${count}</div><div class="stat-label">プレイ回数</div></div>
@@ -928,21 +1006,19 @@ async function renderGraph() {
     <div class="graph-canvas-wrap">
       <canvas id="scoreChart"></canvas>
     </div>
-    <div class="graph-log" id="graphLog"></div>
-    <div style="text-align:center;margin-top:10px">
+    <div class="hist-section">
+      <div class="hist-title">📋 履歴一覧</div>
+      <div class="graph-log" style="max-height:none;padding:0">
+        <table class="hist-table">
+          <thead><tr><th>日時</th><th>テーマ</th><th>せいせき</th><th>正答率</th></tr></thead>
+          <tbody>${histRows}</tbody>
+        </table>
+      </div>
+    </div>
+    ${fallbackNote}
+    <div style="text-align:center;margin-top:14px">
       <button class="btn-clear" onclick="clearRecords()">記録をリセット</button>
     </div>`;
-
-  // Build log (newest first)
-  const logEl = document.getElementById('graphLog');
-  let logHTML = '';
-  [...records].reverse().forEach((r, i) => {
-    const d = new Date(r.date);
-    const dateStr = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    const cls = r.score >= 80 ? 'high' : r.score >= 60 ? 'mid' : 'low';
-    logHTML += `<div class="log-row"><span>${dateStr}　${r.theme}</span><span class="log-pct ${cls}">${r.score}%</span></div>`;
-  });
-  logEl.innerHTML = logHTML;
 
   // Chart
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
