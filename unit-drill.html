@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>たんい計算ドリル</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',sans-serif;
+  background:linear-gradient(135deg,#e8f4fd 0%,#fde8f4 100%);min-height:100vh}
+
+/* ===== Screen system ===== */
+.screen{display:none;min-height:100vh;padding:16px}
+.screen.active{display:block}
+
+/* ===== Title screen ===== */
+.title-hero{text-align:center;padding:32px 16px 20px}
+.title-icon{font-size:3.5rem;margin-bottom:8px}
+.title-name{font-size:2rem;font-weight:900;color:#1a5f9e;
+  text-shadow:2px 2px 0 rgba(255,255,255,.9);margin-bottom:4px;letter-spacing:.05em}
+.title-sub{font-size:.95rem;color:#555;margin-bottom:28px}
+.title-theme-label{text-align:center;font-size:1rem;font-weight:bold;color:#1a5f9e;margin-bottom:10px}
+.theme-bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:24px}
+.theme-btn{padding:9px 18px;border:2.5px solid #adc8e8;border-radius:22px;background:#fff;
+  font-size:1rem;cursor:pointer;color:#1a5f9e;font-weight:bold;transition:.15s}
+.theme-btn.active{background:#1a5f9e;color:#fff;border-color:#1a5f9e}
+.title-btns{display:flex;flex-direction:column;gap:14px;max-width:380px;margin:0 auto;padding-bottom:32px}
+.title-btn{width:100%;padding:18px 16px;font-size:1.3rem;font-weight:bold;border:none;
+  border-radius:18px;cursor:pointer;font-family:inherit;transition:.15s;
+  display:flex;align-items:center;justify-content:center;gap:10px}
+.title-btn:active{transform:scale(.97)}
+.btn-start{background:linear-gradient(135deg,#ff9800,#f44336);color:#fff;
+  box-shadow:0 5px 18px rgba(244,67,54,.35)}
+.btn-table{background:linear-gradient(135deg,#4caf50,#009688);color:#fff;
+  box-shadow:0 5px 18px rgba(76,175,80,.3)}
+.btn-graph{background:linear-gradient(135deg,#9c27b0,#3f51b5);color:#fff;
+  box-shadow:0 5px 18px rgba(156,39,176,.3)}
+
+/* ===== Shared header for sub-screens ===== */
+.sub-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;max-width:660px;margin-left:auto;margin-right:auto}
+.back-btn{padding:8px 16px;background:#fff;border:2px solid #adc8e8;border-radius:12px;
+  font-size:1rem;font-weight:bold;color:#1a5f9e;cursor:pointer;white-space:nowrap}
+.back-btn:active{transform:scale(.96)}
+.sub-title{font-size:1.2rem;font-weight:bold;color:#1a5f9e}
+
+/* ===== Progress bar (quiz screen) ===== */
+.progress-wrap{max-width:660px;margin:0 auto 14px}
+.progress-label{text-align:center;font-size:.85rem;color:#555;margin-bottom:6px}
+.progress-bar{background:#dceeff;border-radius:10px;height:14px;overflow:hidden}
+.progress-fill{background:linear-gradient(90deg,#4da6f5,#a84df5);height:100%;
+  transition:width .4s;border-radius:10px}
+
+/* ===== Card (shared) ===== */
+.card{background:#fff;border-radius:18px;box-shadow:0 4px 18px rgba(0,0,0,.1);
+  padding:20px 18px;margin-bottom:14px;max-width:660px;margin-left:auto;margin-right:auto}
+
+/* ===== Quiz ===== */
+.q-num{font-size:.85rem;color:#888;margin-bottom:6px}
+.q-text{font-size:1.3rem;font-weight:bold;color:#1a1a1a;margin-bottom:14px;line-height:1.6}
+.ans-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.ans-label{font-size:1rem;color:#555;font-weight:bold}
+.ans-input{width:130px;height:52px;font-size:1.4rem;text-align:center;
+  border:3px solid #adc8e8;border-radius:12px;outline:none;transition:.15s;padding:0 6px}
+.ans-input:focus{border-color:#4da6f5;box-shadow:0 0 0 3px rgba(77,166,245,.2)}
+.feedback{text-align:center;font-size:1.4rem;font-weight:bold;padding:12px 0;display:none}
+.feedback.correct{color:#2e7d32}
+.feedback.wrong{color:#c62828;font-size:1.05rem;line-height:1.5}
+
+/* ===== Buttons ===== */
+.btn{display:inline-block;padding:14px 28px;font-size:1.15rem;font-weight:bold;
+  border:none;border-radius:14px;cursor:pointer;transition:.15s;font-family:inherit}
+.btn-check{background:linear-gradient(135deg,#ff9800,#f44336);color:#fff;
+  box-shadow:0 4px 12px rgba(244,67,54,.3)}
+.btn-next{background:linear-gradient(135deg,#4caf50,#2196f3);color:#fff;
+  box-shadow:0 4px 12px rgba(76,175,80,.3);display:none}
+.btn-retry{background:linear-gradient(135deg,#ff9800,#f44336);color:#fff;
+  box-shadow:0 4px 12px rgba(244,67,54,.3)}
+.btn-home{background:linear-gradient(135deg,#9c27b0,#3f51b5);color:#fff;
+  box-shadow:0 4px 12px rgba(156,39,176,.3)}
+.btn:active{transform:scale(.96)}
+.btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* ===== Result ===== */
+.result-card{text-align:center;padding:28px 20px}
+.result-score{font-size:2.8rem;font-weight:bold;color:#1a5f9e;margin:12px 0}
+.result-pct{font-size:2rem;font-weight:bold;color:#e65100;margin-bottom:8px}
+.result-msg{font-size:1.2rem;color:#555;margin-bottom:18px}
+.result-list{text-align:left;margin:0 auto 20px;max-width:440px}
+.result-list li{margin:5px 0;font-size:.95rem}
+.r-ok{color:#2e7d32} .r-ng{color:#c62828}
+
+/* ===== Fuku (覆面算) ===== */
+.fuku-wrap{font-family:'Courier New',Courier,monospace;font-size:1.4rem;margin-bottom:14px;overflow-x:auto}
+.fuku-table{border-collapse:collapse;margin:auto}
+.fuku-table td{padding:2px 4px;text-align:center;min-width:36px;vertical-align:middle}
+.fk-sym{display:inline-block;color:#d44;font-weight:bold;font-size:1rem}
+.fk-digit{font-size:1.4rem;font-weight:bold}
+.fk-times{font-size:1.4rem;padding-right:8px}
+.fk-line td{padding:2px 0}
+.fk-line hr{border:none;border-top:2.5px solid #333;margin:2px 0}
+.fk-key{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;justify-content:center}
+.fk-key-item{display:flex;align-items:center;gap:6px;font-size:1.1rem}
+.fk-key-label{color:#d44;font-weight:bold;min-width:20px}
+.fk-key-input{width:44px;height:44px;text-align:center;font-size:1.3rem;
+  border:2.5px solid #d44;border-radius:8px;padding:0;font-weight:bold}
+
+/* ===== Unit table screen ===== */
+.unit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:660px;margin:0 auto}
+.unit-card{background:#fff;border-radius:16px;box-shadow:0 3px 14px rgba(0,0,0,.1);padding:16px 14px}
+.unit-card-title{font-size:1.1rem;font-weight:bold;margin-bottom:10px;
+  padding-bottom:6px;border-bottom:3px solid currentColor}
+.unit-card.length .unit-card-title{color:#1976d2;border-color:#1976d2}
+.unit-card.weight .unit-card-title{color:#e64a19;border-color:#e64a19}
+.unit-card.volume .unit-card-title{color:#00796b;border-color:#00796b}
+.unit-card.area   .unit-card-title{color:#6a1b9a;border-color:#6a1b9a}
+.unit-row{display:flex;align-items:center;font-size:1rem;margin:6px 0;gap:6px;flex-wrap:wrap}
+.unit-val{font-weight:bold;font-size:1.05rem}
+.unit-eq{color:#888;font-size:.9rem}
+.unit-arrow{color:#bbb;font-size:.85rem;margin:0 2px}
+.unit-big{grid-column:1/-1}
+
+/* ===== Graph screen ===== */
+.graph-wrap{max-width:660px;margin:0 auto}
+.graph-empty{text-align:center;color:#888;font-size:1.1rem;padding:40px 0}
+.graph-canvas-wrap{background:#fff;border-radius:16px;box-shadow:0 3px 14px rgba(0,0,0,.1);
+  padding:16px;margin-bottom:14px}
+.graph-stats{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:14px}
+.stat-box{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08);
+  padding:14px 20px;text-align:center;min-width:110px}
+.stat-val{font-size:1.8rem;font-weight:bold;color:#1a5f9e}
+.stat-label{font-size:.8rem;color:#666;margin-top:2px}
+.graph-log{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08);
+  padding:14px;max-height:260px;overflow-y:auto}
+.log-row{display:flex;justify-content:space-between;align-items:center;
+  padding:7px 4px;border-bottom:1px solid #f0f0f0;font-size:.9rem}
+.log-row:last-child{border-bottom:none}
+.log-pct{font-weight:bold}
+.log-pct.high{color:#2e7d32} .log-pct.mid{color:#f57c00} .log-pct.low{color:#c62828}
+.btn-clear{background:#fff;border:2px solid #f44336;color:#f44336;
+  border-radius:10px;padding:8px 18px;font-size:.9rem;font-weight:bold;cursor:pointer;margin-top:10px}
+
+/* ===== Responsive ===== */
+@media(max-width:520px){
+  .unit-grid{grid-template-columns:1fr}
+  .unit-big{grid-column:1}
+  .q-text{font-size:1.1rem}
+  .ans-input{width:110px;height:46px;font-size:1.2rem}
+  .btn{padding:12px 20px;font-size:1rem}
+  .fk-key-input{width:38px;height:38px;font-size:1rem}
+  .fuku-table td{min-width:30px}
+  .title-name{font-size:1.6rem}
+  .title-btn{font-size:1.1rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== TITLE SCREEN ========== -->
+<div class="screen active" id="screen-title">
+  <div class="title-hero">
+    <div class="title-icon">🔢</div>
+    <div class="title-name">たんい計算ドリル</div>
+    <div class="title-sub">小4レベル｜計算・単位変換・覆面算</div>
+  </div>
+
+  <div class="title-theme-label">テーマを選ぼう</div>
+  <div class="theme-bar" id="titleThemeBar">
+    <button class="theme-btn active" data-theme="ぜんぶ">ぜんぶ</button>
+    <button class="theme-btn" data-theme="長さ">長さ</button>
+    <button class="theme-btn" data-theme="重さ">重さ</button>
+    <button class="theme-btn" data-theme="かさ">かさ</button>
+    <button class="theme-btn" data-theme="面積">面積</button>
+    <button class="theme-btn" data-theme="計算">計算</button>
+    <button class="theme-btn" data-theme="覆面算">覆面算</button>
+  </div>
+
+  <div class="title-btns">
+    <button class="title-btn btn-start" onclick="startGame()">
+      ▶ スタート
+    </button>
+    <button class="title-btn btn-table" onclick="showScreen('table')">
+      📐 たんいの表を見る
+    </button>
+    <button class="title-btn btn-graph" onclick="showScreen('graph')">
+      📊 きろく（グラフ）を見る
+    </button>
+  </div>
+</div>
+
+<!-- ========== QUIZ SCREEN ========== -->
+<div class="screen" id="screen-quiz">
+  <div class="progress-wrap">
+    <div class="progress-label" id="progressLabel"></div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+  <div id="appArea"></div>
+</div>
+
+<!-- ========== UNIT TABLE SCREEN ========== -->
+<div class="screen" id="screen-table">
+  <div class="sub-header">
+    <button class="back-btn" onclick="showScreen('title')">← もどる</button>
+    <span class="sub-title">📐 たんいの表</span>
+  </div>
+
+  <div class="unit-grid">
+    <!-- 長さ -->
+    <div class="unit-card length">
+      <div class="unit-card-title">📏 長さ</div>
+      <div class="unit-row"><span class="unit-val">1 cm</span><span class="unit-eq">= 10 mm</span></div>
+      <div class="unit-row"><span class="unit-val">1 m</span><span class="unit-eq">= 100 cm</span></div>
+      <div class="unit-row"><span class="unit-val">1 km</span><span class="unit-eq">= 1000 m</span></div>
+      <hr style="margin:10px 0;border-color:#e0e0e0">
+      <div class="unit-row" style="font-size:.88rem;color:#444">
+        mm <span class="unit-arrow">→</span> cm <span class="unit-arrow">→</span> m <span class="unit-arrow">→</span> km
+      </div>
+      <div class="unit-row" style="font-size:.82rem;color:#888">
+        ÷10 &nbsp;÷100 &nbsp;÷1000
+      </div>
+    </div>
+
+    <!-- 重さ -->
+    <div class="unit-card weight">
+      <div class="unit-card-title">⚖️ 重さ</div>
+      <div class="unit-row"><span class="unit-val">1 g</span><span class="unit-eq">= 1000 mg</span></div>
+      <div class="unit-row"><span class="unit-val">1 kg</span><span class="unit-eq">= 1000 g</span></div>
+      <div class="unit-row"><span class="unit-val">1 t</span><span class="unit-eq">= 1000 kg</span></div>
+      <hr style="margin:10px 0;border-color:#e0e0e0">
+      <div class="unit-row" style="font-size:.88rem;color:#444">
+        mg <span class="unit-arrow">→</span> g <span class="unit-arrow">→</span> kg <span class="unit-arrow">→</span> t
+      </div>
+      <div class="unit-row" style="font-size:.82rem;color:#888">
+        ÷1000 &nbsp;÷1000 &nbsp;÷1000
+      </div>
+    </div>
+
+    <!-- かさ -->
+    <div class="unit-card volume">
+      <div class="unit-card-title">🧃 かさ（体積）</div>
+      <div class="unit-row"><span class="unit-val">1 L</span><span class="unit-eq">= 10 dL</span></div>
+      <div class="unit-row"><span class="unit-val">1 L</span><span class="unit-eq">= 1000 mL</span></div>
+      <div class="unit-row"><span class="unit-val">1 dL</span><span class="unit-eq">= 100 mL</span></div>
+      <div class="unit-row"><span class="unit-val">1 kL</span><span class="unit-eq">= 1000 L</span></div>
+      <hr style="margin:10px 0;border-color:#e0e0e0">
+      <div class="unit-row" style="font-size:.88rem;color:#444">
+        mL <span class="unit-arrow">→</span> dL <span class="unit-arrow">→</span> L <span class="unit-arrow">→</span> kL
+      </div>
+      <div class="unit-row" style="font-size:.82rem;color:#888">
+        ÷100 &nbsp;÷10 &nbsp;÷1000
+      </div>
+    </div>
+
+    <!-- 面積 -->
+    <div class="unit-card area">
+      <div class="unit-card-title">🗾 面積</div>
+      <div class="unit-row"><span class="unit-val">1 m²</span><span class="unit-eq">= 10000 cm²</span></div>
+      <div class="unit-row"><span class="unit-val">1 a</span><span class="unit-eq">= 100 m²</span></div>
+      <div class="unit-row"><span class="unit-val">1 ha</span><span class="unit-eq">= 100 a = 10000 m²</span></div>
+      <div class="unit-row"><span class="unit-val">1 km²</span><span class="unit-eq">= 100 ha = 1000000 m²</span></div>
+      <hr style="margin:10px 0;border-color:#e0e0e0">
+      <div class="unit-row" style="font-size:.88rem;color:#444">
+        cm² <span class="unit-arrow">→</span> m² <span class="unit-arrow">→</span> a <span class="unit-arrow">→</span> ha <span class="unit-arrow">→</span> km²
+      </div>
+      <div class="unit-row" style="font-size:.82rem;color:#888">
+        ÷10000 &nbsp;÷100 &nbsp;÷100 &nbsp;÷100
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== GRAPH SCREEN ========== -->
+<div class="screen" id="screen-graph">
+  <div class="sub-header">
+    <button class="back-btn" onclick="showScreen('title')">← もどる</button>
+    <span class="sub-title">📊 きろく・グラフ</span>
+  </div>
+  <div class="graph-wrap" id="graphWrap"></div>
+</div>
+
+<script>
+'use strict';
+
+// ===== Screen navigation =====
+let currentTheme = 'ぜんぶ';
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'graph') renderGraph();
+  window.scrollTo(0, 0);
+}
+
+document.getElementById('titleThemeBar').addEventListener('click', e => {
+  const btn = e.target.closest('.theme-btn');
+  if (!btn) return;
+  document.querySelectorAll('#titleThemeBar .theme-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentTheme = btn.dataset.theme;
+});
+
+// ===== Utilities =====
+function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function fmt(n) {
+  if (n === null || n === undefined) return '';
+  const s = parseFloat(n.toPrecision(10));
+  return String(s);
+}
+
+// ===== PROBLEM GENERATORS =====
+
+function genA1() {
+  const a = randInt(10, 999), b = randInt(100, 999);
+  return { questionText: `${a} × ${b} = □`, answers: [String(a * b)], inputs: 1, level: 1, theme: '計算' };
+}
+
+function genA3() {
+  const op = randInt(0, 1);
+  const a = randInt(101, 999) / 10;
+  const b = randInt(11, 999) / 100;
+  let ans, qText;
+  if (op === 0) {
+    ans = Math.round((a + b) * 100) / 100;
+    qText = `${fmt(a)} + ${fmt(b)} = □`;
+  } else {
+    const big = Math.max(a, b), small = Math.min(a, b);
+    ans = Math.round((big - small) * 100) / 100;
+    qText = `${fmt(big)} − ${fmt(small)} = □`;
+  }
+  return { questionText: qText, answers: [fmt(ans)], inputs: 1, level: 1, theme: '計算' };
+}
+
+function genA2() {
+  const divisor = randInt(2, 9) * randInt(2, 5);
+  let dividend;
+  do { dividend = randInt(200, 3000); } while (dividend % divisor === 0);
+  return {
+    questionText: `${dividend} ÷ ${divisor} = □ あまり □`,
+    answers: [String(Math.floor(dividend / divisor)), String(dividend % divisor)],
+    inputs: 2, inputLabels: ['商', 'あまり'], level: 2, theme: '計算',
+  };
+}
+
+function genB1() {
+  const pat = randInt(0, 3);
+  let qText, ans;
+  if (pat === 0) {
+    const d = randInt(5, 15), c = d + randInt(5, 15), b = c + randInt(5, 25);
+    const inner = b - (c - d), ans_ = randInt(2, 15);
+    ans = ans_; qText = `${ans_ * inner} ÷ {${b} − (${c} − ${d})} = □`;
+  } else if (pat === 1) {
+    const b = randInt(2, 8), c = randInt(2, 9), d = randInt(2, 8), ans_ = randInt(3, 15);
+    const a = ans_ * d - b * c;
+    if (a <= 0) return genB1();
+    ans = ans_; qText = `(${a} + ${b} × ${c}) ÷ ${d} = □`;
+  } else if (pat === 2) {
+    const a = randInt(10, 30), b = randInt(3, 9), c = randInt(2, 15), d = randInt(2, 8);
+    ans = a * b - c * d;
+    if (ans <= 0 || ans > 500) return genB1();
+    qText = `${a} × ${b} − ${c} × ${d} = □`;
+  } else {
+    const b = randInt(5, 20), a = b + randInt(5, 20), c = randInt(2, 8), d = randInt(2, 50);
+    ans = (a - b) * c + d; qText = `(${a} − ${b}) × ${c} + ${d} = □`;
+  }
+  return { questionText: qText, answers: [String(ans)], inputs: 1, level: 2, theme: '計算' };
+}
+
+function genB2(level) {
+  let result = null, tries = 0;
+  while (!result && tries < 50) { tries++; result = _tryB2(level); }
+  if (!result) return genB2(level);
+  return { ...result, inputs: 1, level, theme: '計算' };
+}
+
+function _tryB2(level) {
+  if (level === 3) {
+    if (randInt(0, 1) === 0) {
+      const B = randInt(2, 6), box = randInt(1, 8) * B;
+      const A = Math.floor(box / B) + randInt(3, 15), inner = A - box / B, C = 2 * inner;
+      if (C <= 0 || !Number.isInteger(C)) return null;
+      return { questionText: `2 × (${A} − □ ÷ ${B}) = ${C} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    } else {
+      const B = randInt(2, 7), C = randInt(2, 8), box = randInt(2, 10), D = randInt(5, 20);
+      const A = D * C - B * box;
+      if (A <= 0 || A > 200) return null;
+      return { questionText: `(${A} + ${B} × □) ÷ ${C} = ${D} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    }
+  }
+  if (level === 4) {
+    if (randInt(0, 1) === 0) {
+      const B = randInt(2, 6), C = randInt(2, 15), D = randInt(3, 20), box = randInt(2, 10);
+      const inner = box * B + C, q = randInt(2, 10), A = q * inner, E = q + D;
+      if (A > 9999 || E > 99) return null;
+      return { questionText: `${A} ÷ (□ × ${B} + ${C}) + ${D} = ${E} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    } else {
+      const B = randInt(3, 8), C = randInt(2, 10), box = randInt(2, 10), D = randInt(5, 50);
+      const A = D + B * (box + C);
+      if (A > 500) return null;
+      return { questionText: `${A} − ${B} × (□ + ${C}) = ${D} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    }
+  }
+  if (level === 5) {
+    const pat = randInt(0, 5);
+    if (pat === 0) {
+      const A = randInt(8, 50), B = randInt(3, 20), C = randInt(2, 8), D = randInt(1, 15), box = randInt(2, 12);
+      const E = 1000 - (box * A + B * C) - D;
+      if (E < 0 || E > 300) return null;
+      return { questionText: `1000 − (□ × ${A} + ${B} × ${C}) − ${D} = ${E} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    } else if (pat === 1) {
+      const B = randInt(3, 7), C = randInt(3, 12), D = randInt(8, 30), box = randInt(2, 10), E = randInt(D + 5, D + 40);
+      const q = E - D, inner = box * B + C, A = q * inner;
+      if (A > 9999 || inner < 5) return null;
+      return { questionText: `${A} ÷ (□ × ${B} + ${C}) + ${D} = ${E} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    } else if (pat === 2) {
+      const B = randInt(2, 7), box = randInt(2, 8), A = B * box + randInt(4, 15), C = randInt(5, 40);
+      const inner = A - B * box, E = randInt(5, 80), D = inner * C - E;
+      if (D < 0 || D > 5000) return null;
+      return { questionText: `(${A} − ${B} × □) × ${C} − ${D} = ${E} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    } else if (pat === 3) {
+      const B = randInt(4, 15), D = randInt(2, 7), E = randInt(3, 12), box = randInt(2, 15), A = randInt(5, 25);
+      const C = (A + box) * B - D * E;
+      if (C <= 0 || C > 500) return null;
+      return { questionText: `{(${A} + □) × ${B} − ${C}} ÷ ${D} = ${E} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    } else if (pat === 4) {
+      const B = randInt(4, 9), C = randInt(3, 7), D = randInt(1, Math.max(1, B * C - 4));
+      const inner2 = B * C - D;
+      if (inner2 <= 1) return null;
+      const E = randInt(2, 8), box = randInt(2, 12), A = E * box * inner2;
+      if (A > 9999) return null;
+      return { questionText: `${A} ÷ □ ÷ (${B} × ${C} − ${D}) = ${E} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    } else {
+      const A = randInt(2, 8), B = randInt(2, 8), C = randInt(5, 20), box = randInt(2, 10);
+      const D = A * box - B * (C - box);
+      if (D <= 0 || !Number.isInteger(D)) return null;
+      return { questionText: `${A} × □ − ${B} × (${C} − □) = ${D} のとき、□にあてはまる数を求めなさい。`, answers: [String(box)] };
+    }
+  }
+  return null;
+}
+
+function genC1() {
+  const pats = [
+    () => { const c = [0.47, 1.23, 0.8, 2.5, 0.03, 3.6, 0.15, 4.72, 0.9, 1.05]; const v = pick(c); return { q: `${v}km = □m`, ans: v * 1000 }; },
+    () => { const cm = randInt(10, 500); return { q: `${cm}cm = □mm`, ans: cm * 10 }; },
+    () => { const v = [0.3, 1.5, 2.4, 3.8, 0.7, 4.2, 1.8, 0.15, 2.35, 3.05]; const m = pick(v); return { q: `${m}m = □cm`, ans: Math.round(m * 100) }; },
+    () => { const mm = randInt(1, 50) * 10; return { q: `${mm}mm = □cm`, ans: mm / 10 }; },
+    () => { const m = pick([100, 200, 300, 400, 500, 800, 1500, 2400, 750]); return { q: `${m}m = □km`, ans: m / 1000 }; },
+    () => { const cm = pick([100, 200, 350, 480, 120, 300, 560, 750]); return { q: `${cm}cm = □m`, ans: cm / 100 }; },
+  ];
+  const { q, ans } = pick(pats)();
+  return { questionText: q, answers: [fmt(ans)], inputs: 1, level: 1, theme: '長さ' };
+}
+
+function genC2() {
+  const pats = [
+    () => { const kg = pick([0.43, 1.25, 0.8, 2.4, 0.07, 3.6, 0.15, 4.72]); return { q: `${kg}kg = □g`, ans: Math.round(kg * 1000) }; },
+    () => { const g = randInt(1, 50) * 100; return { q: `${g}g = □kg`, ans: g / 1000 }; },
+    () => { const mg = pick([100, 200, 500, 1000, 1500, 2400, 3600, 800]); return { q: `${mg}mg = □g`, ans: mg / 1000 }; },
+    () => { const g = pick([0.5, 1.2, 2.5, 3.8, 0.75, 1.5, 4.2]); return { q: `${g}g = □mg`, ans: g * 1000 }; },
+    () => { const t = pick([0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.5, 2.4]); return { q: `${t}t = □kg`, ans: t * 1000 }; },
+    () => { const mg = pick([6400, 3200, 8000, 4800, 9600, 5600, 7200]); return { q: `${mg}mg = □kg`, ans: mg / 1000000 }; },
+  ];
+  const { q, ans } = pick(pats)();
+  return { questionText: q, answers: [fmt(ans)], inputs: 1, level: 2, theme: '重さ' };
+}
+
+function genC3() {
+  const pats = [
+    () => { const kl = pick([0.035, 0.1, 0.25, 0.5, 1.5, 2.4, 3.8, 0.07]); return { q: `${kl}kL = □L`, ans: Math.round(kl * 1000) }; },
+    () => { const L = pick([1, 2, 3, 5, 8, 10, 15, 25, 35, 70]); return { q: `${L}L = □kL`, ans: L / 1000 }; },
+    () => { const dL = pick([10, 20, 30, 50, 80, 100, 150, 250, 350, 690]); return { q: `${dL}dL = □mL`, ans: dL * 100 }; },
+    () => { const mL = pick([200, 500, 1000, 1500, 2000, 3500, 5000, 6900]); return { q: `${mL}mL = □dL`, ans: mL / 100 }; },
+    () => { const L = pick([2, 3.5, 4.2, 6.9, 1.8, 7.5]); return { q: `${L}L = □dL`, ans: L * 10 }; },
+    () => { const dL = pick([4, 8, 12, 20, 35, 48, 60, 70, 90]); return { q: `${dL}dL = □L`, ans: dL / 10 }; },
+  ];
+  const { q, ans } = pick(pats)();
+  return { questionText: q, answers: [fmt(ans)], inputs: 1, level: 1, theme: 'かさ' };
+}
+
+function genC4() {
+  const pats = [
+    () => { const v = pick([1, 2, 3, 4, 5, 8, 10, 15]); return { q: `${v}m² = □cm²`, ans: v * 10000 }; },
+    () => { const v = pick([10000, 20000, 30000, 50000, 80000, 100000]); return { q: `${v}cm² = □m²`, ans: v / 10000 }; },
+    () => { const v = pick([1, 2, 3, 4, 5, 8, 10]); return { q: `${v}a = □m²`, ans: v * 100 }; },
+    () => { const v = pick([200, 300, 400, 500, 600, 800, 1000]); return { q: `${v}m² = □a`, ans: v / 100 }; },
+    () => { const v = pick([1, 2, 3, 4, 5, 8, 10]); return { q: `${v}ha = □m²`, ans: v * 10000 }; },
+    () => { const v = pick([8000, 10000, 20000, 30000, 50000, 80000, 100000]); return { q: `${v}m² = □a`, ans: v / 100 }; },
+    () => { const v = pick([1, 2, 3, 5, 10]); return { q: `${v}ha = □a`, ans: v * 100 }; },
+  ];
+  const { q, ans } = pick(pats)();
+  return { questionText: q, answers: [fmt(ans)], inputs: 1, level: 2, theme: '面積' };
+}
+
+function genD(subTheme) {
+  const theme = subTheme || pick(['長さ', '重さ', 'かさ', '面積']);
+  let pats;
+  if (theme === '長さ') {
+    pats = [
+      () => { const km = pick([0.1, 0.2, 0.3, 0.5, 0.8, 1.2, 1.8, 2.5]), m = randInt(10, 900); return { q: `${km}km + ${m}m = □m`, ans: fmt(km * 1000 + m) }; },
+      () => { const km = randInt(1, 5), m = randInt(100, 900); return { q: `${km}km − ${m}m = □km`, ans: fmt(km - m / 1000) }; },
+      () => { const m = randInt(1, 15), cm = randInt(10, 90) * 10; return { q: `${m}m + ${cm}cm = □cm`, ans: String(m * 100 + cm) }; },
+      () => { const m = randInt(2, 8), cm = randInt(50, 400); return { q: `${m}m + ${cm}cm = □m`, ans: fmt(m + cm / 100) }; },
+    ];
+  } else if (theme === '重さ') {
+    pats = [
+      () => { const kg = randInt(10, 80) * 10, g = randInt(10, 900); return { q: `${kg}kg + ${g}g = □kg`, ans: fmt(kg + g / 1000) }; },
+      () => { const kg = randInt(5, 50), g = randInt(100, 900); return { q: `${kg}kg − ${g}g = □kg`, ans: fmt(kg - g / 1000) }; },
+      () => { const t = pick([0.5, 1.2, 2.5, 3.8]), kg = randInt(10, 800); return { q: `${t}t + ${kg}kg = □kg`, ans: String(t * 1000 + kg) }; },
+      () => { const g = randInt(1, 9) * 1000 + randInt(1, 9) * 100, mg = randInt(100, 900); return { q: `${g}g + ${mg}mg = □g`, ans: fmt(g + mg / 1000) }; },
+    ];
+  } else if (theme === 'かさ') {
+    pats = [
+      () => { const L = pick([0.4, 1.6, 2.8, 3.2, 5.5, 6.9]), dL = randInt(1, 9); return { q: `${L}L + ${dL}dL = □dL`, ans: fmt(L * 10 + dL) }; },
+      () => { const v = pick([400, 600, 800, 1200, 2000]), dL = randInt(3, 8); return { q: `${v}mL + ${dL}dL = □mL`, ans: String(dL * 100 + v) }; },
+      () => { const L = randInt(1, 5), dL = randInt(3, 8); return { q: `${L}L − ${dL}dL = □L`, ans: fmt(L - dL / 10) }; },
+      () => { const kL = pick([0.05, 0.1, 0.2, 0.5, 1.5]), L = randInt(10, 400); return { q: `${kL}kL + ${L}L = □L`, ans: String(kL * 1000 + L) }; },
+    ];
+  } else {
+    pats = [
+      () => { const ha = randInt(1, 5), m2 = randInt(100, 9000); return { q: `${ha}ha + ${m2}m² = □m²`, ans: String(ha * 10000 + m2) }; },
+      () => { const m2 = randInt(2, 8) * 1000, a = randInt(1, 9); return { q: `${m2}m² + ${a}a = □a`, ans: fmt(m2 / 100 + a) }; },
+      () => { const ha = randInt(2, 8), m2 = randInt(100, 6000); return { q: `${ha}ha − ${m2}m² = □m²`, ans: String(ha * 10000 - m2) }; },
+      () => { const v = pick([0.01, 0.05, 0.1, 0.5]), ha = randInt(5, 50); const ans = v * 100 - ha; if (ans <= 0) return null; return { q: `${v}km² − ${ha}ha = □ha`, ans: fmt(ans) }; },
+    ];
+  }
+  let res = null, t = 0;
+  while (!res && t < 20) { res = pick(pats)(); t++; }
+  if (!res) return genD(subTheme);
+  return { questionText: res.q, answers: [res.ans], inputs: 1, level: 3, theme };
+}
+
+function genE(subTheme) {
+  const theme = subTheme || pick(['長さ', '重さ', 'かさ', '面積']);
+  let pats;
+  if (theme === '重さ') {
+    pats = [
+      () => { const t = pick([0.05, 0.1, 0.2, 0.5]), kg = randInt(10, 200), g = randInt(100, 900); return { q: `${t}t + ${kg}kg + ${g}g = □kg`, ans: fmt(t * 1000 + kg + g / 1000) }; },
+      () => { const kg = randInt(1, 5), g = randInt(100, 800), mg = randInt(100, 500); const total = kg * 1000 - g - mg / 1000; if (total <= 0) return null; return { q: `${kg}kg − ${g}g − ${mg}mg = □g`, ans: fmt(total) }; },
+    ];
+  } else if (theme === 'かさ') {
+    pats = [
+      () => { const vm = pick([70, 80, 100, 200]), dL = randInt(2, 8), L = randInt(1, 3); const total = vm / 1000 + dL / 10 - L; if (total <= 0) return null; return { q: `${vm}mL + ${dL}dL − ${L}L = □L`, ans: fmt(total) }; },
+      () => { const kv = pick([0.002, 0.003, 0.005, 0.01]), mv = pick([70, 80, 100, 150, 200]), dL = randInt(1, 5); return { q: `${kv}kL + ${mv}mL + ${dL}dL = □L`, ans: fmt(kv * 1000 + mv / 1000 + dL / 10) }; },
+    ];
+  } else if (theme === '長さ') {
+    pats = [
+      () => { const kv = pick([0.1, 0.2, 0.5, 1.5, 2]), m = randInt(50, 500), cm = randInt(10, 90) * 10; return { q: `${kv}km + ${m}m + ${cm}cm = □m`, ans: fmt(kv * 1000 + m + cm / 100) }; },
+      () => { const km = randInt(1, 5), m = randInt(100, 700), cm = randInt(10, 80) * 10; const total = km * 1000 - m - cm / 100; if (total <= 0) return null; return { q: `${km}km − ${m}m − ${cm}cm = □m`, ans: fmt(total) }; },
+    ];
+  } else {
+    pats = [
+      () => { const kv = pick([0.006, 0.01, 0.05, 0.1]), ha = randInt(1, 5), a = randInt(10, 30); const total = kv * 1000000 - ha * 10000 - a * 100; if (total <= 0) return null; return { q: `${kv}km² − ${ha}ha − ${a}a = □m²`, ans: fmt(total) }; },
+      () => { const ha = randInt(1, 3), a = randInt(5, 50), m2 = randInt(100, 5000); return { q: `${ha}ha + ${a}a + ${m2}m² = □m²`, ans: String(ha * 10000 + a * 100 + m2) }; },
+    ];
+  }
+  let res = null, t = 0;
+  while (!res && t < 20) { res = pick(pats)(); t++; }
+  if (!res) return genE(subTheme);
+  return { questionText: res.q, answers: [res.ans], inputs: 1, level: 4, theme };
+}
+
+function genF() {
+  let a, b, b1, b2, p1, p2, total, ok = false, tries = 0;
+  while (!ok && tries < 200) {
+    tries++;
+    a = randInt(13, 98); b = randInt(13, 98);
+    b1 = Math.floor(b / 10); b2 = b % 10;
+    if (b1 === 0 || b2 === 0) continue;
+    p1 = a * b2; p2 = a * b1; total = a * b;
+    if (p1 < 10 || p2 < 10 || total < 1000) continue;
+    ok = true;
+  }
+  if (!ok) return genF();
+
+  function toRow(n, shift) {
+    shift = shift || 0;
+    const s = String(n).split('').map(Number);
+    const row = [null, null, null, null];
+    const start = 4 - s.length - shift;
+    s.forEach((d, i) => { if (start + i >= 0 && start + i < 4) row[start + i] = d; });
+    if (shift > 0) row[3] = 0;
+    return row;
+  }
+
+  const rowData = { a: toRow(a), b: toRow(b), p1: toRow(p1), p2: toRow(p2, 1), total: toRow(total) };
+  const rowNames = ['a', 'b', 'p1', 'p2', 'total'];
+  const positions = [];
+  rowNames.forEach(rn => rowData[rn].forEach((d, c) => { if (d !== null) positions.push({ row: rn, col: c, digit: d }); }));
+
+  shuffle(positions);
+  const numHide = randInt(6, Math.min(8, positions.length));
+  const hidden = positions.slice(0, numHide);
+  hidden.sort((x, y) => { const ri = rowNames.indexOf(x.row) - rowNames.indexOf(y.row); return ri !== 0 ? ri : x.col - y.col; });
+
+  const symbols = 'アイウエオカキクケコ'.split('');
+  const hiddenMap = {}, symList = [];
+  hidden.forEach((h, i) => { h.sym = symbols[i]; hiddenMap[`${h.row},${h.col}`] = h; symList.push({ sym: symbols[i], digit: h.digit }); });
+
+  function cellHTML(rn, c) {
+    const d = rowData[rn][c];
+    if (d === null) return '<td class="fk-empty">&nbsp;</td>';
+    const hid = hiddenMap[`${rn},${c}`];
+    if (hid) return `<td class="fk-cell"><span class="fk-sym">${hid.sym}</span></td>`;
+    return `<td class="fk-cell fk-digit">${d}</td>`;
+  }
+
+  let tbl = '<table class="fuku-table">';
+  ['a', 'b', 'p1', 'p2', 'total'].forEach((rn, idx) => {
+    if (idx === 2) tbl += '<tr class="fk-line"><td colspan="5"><hr></td></tr>';
+    if (idx === 4) tbl += '<tr class="fk-line"><td colspan="5"><hr></td></tr>';
+    const op = idx === 1 ? '<td class="fk-op fk-times">×</td>' : '<td class="fk-op">&nbsp;</td>';
+    tbl += `<tr>${op}`;
+    for (let c = 0; c < 4; c++) tbl += cellHTML(rn, c);
+    tbl += '</tr>';
+  });
+  tbl += '</table>';
+
+  let keyHTML = '<div class="fk-key">';
+  symList.forEach(({ sym }) => {
+    keyHTML += `<div class="fk-key-item"><span class="fk-key-label">${sym}</span><input type="number" min="0" max="9" class="fk-key-input" data-sym="${sym}" inputmode="numeric"></div>`;
+  });
+  keyHTML += '</div>';
+
+  const answerMap = {};
+  symList.forEach(({ sym, digit }) => { answerMap[sym] = String(digit); });
+
+  return { isFuku: true, tableHTML: tbl, keyHTML, answerMap, symList, inputs: symList.length, level: 5, theme: '覆面算', questionText: '筆算の□にあてはまる数を求めなさい。' };
+}
+
+// ===== Problem Pool =====
+const GENS = [
+  { fn: genA1, level: 1, themes: ['ぜんぶ', '計算'] },
+  { fn: genA3, level: 1, themes: ['ぜんぶ', '計算'] },
+  { fn: genC1, level: 1, themes: ['ぜんぶ', '長さ'] },
+  { fn: genC3, level: 1, themes: ['ぜんぶ', 'かさ'] },
+  { fn: genA2, level: 2, themes: ['ぜんぶ', '計算'] },
+  { fn: genB1, level: 2, themes: ['ぜんぶ', '計算'] },
+  { fn: genC2, level: 2, themes: ['ぜんぶ', '重さ'] },
+  { fn: genC4, level: 2, themes: ['ぜんぶ', '面積'] },
+  { fn: () => genB2(3), level: 3, themes: ['ぜんぶ', '計算'] },
+  { fn: () => genD('長さ'), level: 3, themes: ['ぜんぶ', '長さ'] },
+  { fn: () => genD('重さ'), level: 3, themes: ['ぜんぶ', '重さ'] },
+  { fn: () => genD('かさ'), level: 3, themes: ['ぜんぶ', 'かさ'] },
+  { fn: () => genD('面積'), level: 3, themes: ['ぜんぶ', '面積'] },
+  { fn: () => genB2(4), level: 4, themes: ['ぜんぶ', '計算'] },
+  { fn: () => genE('長さ'), level: 4, themes: ['ぜんぶ', '長さ'] },
+  { fn: () => genE('重さ'), level: 4, themes: ['ぜんぶ', '重さ'] },
+  { fn: () => genE('かさ'), level: 4, themes: ['ぜんぶ', 'かさ'] },
+  { fn: () => genE('面積'), level: 4, themes: ['ぜんぶ', '面積'] },
+  { fn: () => genB2(5), level: 5, themes: ['ぜんぶ', '計算'] },
+  { fn: genF, level: 5, themes: ['ぜんぶ', '覆面算'] },
+];
+
+function buildSet(theme) {
+  const avail = GENS.filter(g => g.themes.includes(theme));
+  if (avail.length === 0) return buildSet('ぜんぶ');
+  const byLevel = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+  avail.forEach(g => { if (byLevel[g.level]) byLevel[g.level].push(g); });
+  const total10 = [2, 2, 2, 2, 2];
+  const avPerLevel = [1, 2, 3, 4, 5].map(l => byLevel[l].length);
+  let toRedist = 0;
+  for (let i = 0; i < 5; i++) { if (avPerLevel[i] === 0) { toRedist += total10[i]; total10[i] = 0; } }
+  if (toRedist > 0) {
+    const nonEmpty = [1, 2, 3, 4, 5].filter(l => byLevel[l].length > 0);
+    for (let i = 0; i < toRedist; i++) total10[nonEmpty[i % nonEmpty.length] - 1]++;
+  }
+  const selected = [];
+  [1, 2, 3, 4, 5].forEach((l, i) => {
+    const pool = shuffle([...byLevel[l]]);
+    for (let j = 0; j < total10[i] && pool.length > 0; j++) selected.push(pool[j % pool.length]);
+  });
+  while (selected.length < 10) selected.push(shuffle([...avail])[0]);
+  selected.sort((a, b) => a.level - b.level);
+  return selected.slice(0, 10).map(g => g.fn());
+}
+
+// ===== Game State =====
+let questions = [], currentQ = 0, score = 0, answered = false, results = [];
+
+function startGame() {
+  questions = buildSet(currentTheme);
+  currentQ = 0; score = 0; answered = false; results = [];
+  showScreen('quiz');
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = questions[currentQ], n = currentQ + 1;
+  document.getElementById('progressLabel').textContent = `第${n}問 ／ 10問`;
+  document.getElementById('progressFill').style.width = `${(n - 1) * 10}%`;
+
+  let html = `<div class="card">
+    <div class="q-num">第 ${n} 問 ／ 10問（レベル ${q.level}）</div>
+    <div class="q-text">${q.questionText}</div>`;
+
+  if (q.isFuku) {
+    html += `<div class="fuku-wrap">${q.tableHTML}</div>${q.keyHTML}`;
+  } else if (q.inputs === 1) {
+    html += `<div class="ans-row"><span class="ans-label">こたえ：</span>
+      <input id="ans0" class="ans-input" type="text" inputmode="decimal" autocomplete="off" placeholder="？"></div>`;
+  } else {
+    for (let i = 0; i < q.inputs; i++) {
+      const lbl = q.inputLabels ? q.inputLabels[i] : `こたえ${i + 1}`;
+      html += `<div class="ans-row"><span class="ans-label">${lbl}：</span>
+        <input id="ans${i}" class="ans-input" type="text" inputmode="numeric" autocomplete="off" placeholder="？"></div>`;
+    }
+  }
+
+  html += `<div class="feedback" id="feedback"></div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-check" id="btnCheck" onclick="checkAnswer()">こたえあわせ</button>
+      <button class="btn btn-next" id="btnNext" onclick="nextQuestion()">
+        ${currentQ < 9 ? 'つぎの問題 →' : '結果を見る'}
+      </button>
+    </div></div>`;
+
+  document.getElementById('appArea').innerHTML = html;
+
+  // Focus & Enter key
+  if (q.isFuku) {
+    const inp = document.querySelector('.fk-key-input');
+    if (inp) inp.focus();
+    document.querySelectorAll('.fk-key-input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); }));
+  } else {
+    document.querySelectorAll('.ans-input').forEach((inp, idx) => {
+      if (idx === 0) inp.focus();
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); });
+    });
+  }
+}
+
+function checkAnswer() {
+  if (answered) return;
+  const q = questions[currentQ];
+  let correct = false;
+  const fb = document.getElementById('feedback');
+
+  if (q.isFuku) {
+    let allOk = true;
+    document.querySelectorAll('.fk-key-input').forEach(inp => {
+      const exp = q.answerMap[inp.dataset.sym], val = inp.value.trim();
+      const ok = val === exp;
+      inp.style.background = ok ? '#e8f5e9' : '#ffebee';
+      inp.style.borderColor = ok ? '#4caf50' : '#f44336';
+      if (!ok) allOk = false;
+    });
+    correct = allOk;
+    if (!correct) {
+      fb.className = 'feedback wrong';
+      fb.innerHTML = 'おしい！ 正しい答えは<br>' + q.symList.map(({ sym, digit }) => `${sym}＝${digit}`).join('　');
+    }
+  } else {
+    const userAns = [];
+    for (let i = 0; i < q.inputs; i++) {
+      const el = document.getElementById(`ans${i}`);
+      userAns.push(el ? el.value.trim() : '');
+    }
+    correct = userAns.every((ua, i) => normalizeNum(ua) === normalizeNum(q.answers[i]));
+    if (!correct) {
+      fb.className = 'feedback wrong';
+      fb.innerHTML = `おしい！ 正しい答えは <strong>${q.answers.join(' あまり ')}</strong>`;
+    }
+  }
+
+  if (correct) { fb.className = 'feedback correct'; fb.innerHTML = '⭕ せいかい！'; score++; }
+  fb.style.display = 'block';
+  document.getElementById('btnCheck').style.display = 'none';
+  document.getElementById('btnNext').style.display = 'inline-block';
+  answered = true;
+  results.push({ q, correct });
+}
+
+function normalizeNum(s) {
+  s = s.trim();
+  const n = parseFloat(s);
+  if (isNaN(n)) return s;
+  return String(parseFloat(n.toPrecision(10)));
+}
+
+function nextQuestion() {
+  answered = false;
+  currentQ++;
+  if (currentQ >= 10) showResult();
+  else showQuestion();
+}
+
+async function showResult() {
+  const pct = Math.round(score / 10 * 100);
+  await saveRecord(pct);
+
+  const emoji = pct >= 90 ? '🏆' : pct >= 70 ? '⭕' : pct >= 50 ? '△' : '💪';
+  const msg = pct >= 90 ? 'すばらしい！完璧に近いです！' : pct >= 70 ? 'よくできました！' : pct >= 50 ? 'もう少しがんばろう！' : 'また練習しよう！くじけないで！';
+
+  let listHTML = '<ul class="result-list">';
+  results.forEach((r, i) => {
+    listHTML += `<li class="${r.correct ? 'r-ok' : 'r-ng'}">${r.correct ? '⭕' : '❌'} 第${i + 1}問 ${r.q.questionText.replace(/\n/g, ' ')}</li>`;
+  });
+  listHTML += '</ul>';
+
+  document.getElementById('progressLabel').textContent = '終了！';
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('appArea').innerHTML = `
+    <div class="card result-card">
+      <div style="font-size:3rem">${emoji}</div>
+      <div class="result-score">${score} / 10問</div>
+      <div class="result-pct">${pct}%</div>
+      <div class="result-msg">${msg}</div>
+      ${listHTML}
+      <div class="btn-row">
+        <button class="btn btn-retry" onclick="startGame()">もう1回 ▶</button>
+        <button class="btn btn-home" onclick="showScreen('title')">🏠 表紙にもどる</button>
+      </div>
+    </div>`;
+}
+
+// ===== Supabase + localStorage =====
+const SUPABASE_URL = 'https://jqtmibcnllvbpwvzxlea.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9ATK4N1-amyEWwJiCVgOJA_wpQ5Anka';
+const STORAGE_KEY  = 'unitDrillRecords';
+const UID_KEY      = 'unitDrillUserId';
+
+let sbClient = null;
+try {
+  sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch(e) { console.warn('Supabase init failed', e); }
+
+function getUserId() {
+  let uid = localStorage.getItem(UID_KEY);
+  if (!uid) {
+    uid = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem(UID_KEY, uid);
+  }
+  return uid;
+}
+
+// ローカルに保存（オフライン時のキャッシュ兼バックアップ）
+function saveLocal(rec) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    arr.push(rec);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch(e) {}
+}
+
+async function saveRecord(pct) {
+  const rec = { date: new Date().toISOString(), score: pct, theme: currentTheme };
+  saveLocal(rec);
+  if (!sbClient) return;
+  try {
+    await sbClient.from('drill_records').insert({
+      user_id:   getUserId(),
+      score:     pct,
+      theme:     currentTheme,
+      played_at: rec.date,
+    });
+  } catch(e) { console.warn('Supabase save failed', e); }
+}
+
+async function loadRecords() {
+  if (sbClient) {
+    try {
+      const { data, error } = await sbClient
+        .from('drill_records')
+        .select('played_at, score, theme')
+        .eq('user_id', getUserId())
+        .order('played_at', { ascending: true });
+      if (!error && data && data.length > 0) {
+        // クラウドのデータをローカルにも同期
+        const local = data.map(r => ({ date: r.played_at, score: r.score, theme: r.theme }));
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(local)); } catch(e) {}
+        return local;
+      }
+    } catch(e) { console.warn('Supabase load failed', e); }
+  }
+  // フォールバック: ローカルストレージ
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { return []; }
+}
+
+async function clearRecords() {
+  if (!confirm('記録をすべて消しますか？')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  if (sbClient) {
+    try { await sbClient.from('drill_records').delete().eq('user_id', getUserId()); }
+    catch(e) { console.warn('Supabase delete failed', e); }
+  }
+  renderGraph();
+}
+
+// ===== Graph =====
+let chartInstance = null;
+
+async function renderGraph() {
+  const records = await loadRecords();
+  const wrap = document.getElementById('graphWrap');
+
+  if (records.length === 0) {
+    wrap.innerHTML = '<div class="graph-empty">まだ記録がありません。<br>スタートして問題を解くと<br>ここにグラフが表示されます。</div>';
+    return;
+  }
+
+  const avg = Math.round(records.reduce((s, r) => s + r.score, 0) / records.length);
+  const best = Math.max(...records.map(r => r.score));
+  const count = records.length;
+
+  const labels = records.map((r, i) => {
+    const d = new Date(r.date);
+    return `${d.getMonth() + 1}/${d.getDate()} (${i + 1}回)`;
+  });
+  const data = records.map(r => r.score);
+
+  wrap.innerHTML = `
+    <div class="graph-stats">
+      <div class="stat-box"><div class="stat-val">${count}</div><div class="stat-label">プレイ回数</div></div>
+      <div class="stat-box"><div class="stat-val">${avg}%</div><div class="stat-label">平均正答率</div></div>
+      <div class="stat-box"><div class="stat-val">${best}%</div><div class="stat-label">最高正答率</div></div>
+    </div>
+    <div class="graph-canvas-wrap">
+      <canvas id="scoreChart"></canvas>
+    </div>
+    <div class="graph-log" id="graphLog"></div>
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn-clear" onclick="clearRecords()">記録をリセット</button>
+    </div>`;
+
+  // Build log (newest first)
+  const logEl = document.getElementById('graphLog');
+  let logHTML = '';
+  [...records].reverse().forEach((r, i) => {
+    const d = new Date(r.date);
+    const dateStr = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const cls = r.score >= 80 ? 'high' : r.score >= 60 ? 'mid' : 'low';
+    logHTML += `<div class="log-row"><span>${dateStr}　${r.theme}</span><span class="log-pct ${cls}">${r.score}%</span></div>`;
+  });
+  logEl.innerHTML = logHTML;
+
+  // Chart
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  const ctx = document.getElementById('scoreChart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '正答率 (%)',
+        data,
+        borderColor: '#4da6f5',
+        backgroundColor: 'rgba(77,166,245,.12)',
+        borderWidth: 3,
+        pointBackgroundColor: data.map(v => v >= 80 ? '#4caf50' : v >= 60 ? '#ff9800' : '#f44336'),
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
+        x: { ticks: { maxRotation: 45, font: { size: 11 } } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y}%` } }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
