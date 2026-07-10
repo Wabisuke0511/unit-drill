@@ -1019,7 +1019,9 @@ async function clearRecords() {
 }
 
 // ===== Graph =====
+const RADAR_THEMES = ['長さ', '重さ', 'かさ', '面積', '計算', '覆面算'];
 let chartInstance = null;
+let radarInstance = null;
 
 async function renderGraph() {
   const wrap = document.getElementById('graphWrap');
@@ -1064,11 +1066,33 @@ async function renderGraph() {
     ? `<div style="text-align:center;font-size:.8rem;color:#f57c00;margin-top:8px">⚠ クラウドに接続できなかったため、このデバイスの記録を表示しています</div>`
     : '';
 
+  // 分野別集計（「ぜんぶ」は除外）
+  const themeStats = {};
+  RADAR_THEMES.forEach(t => { themeStats[t] = { total: 0, count: 0 }; });
+  records.forEach(r => {
+    if (themeStats[r.theme]) {
+      themeStats[r.theme].total += r.score;
+      themeStats[r.theme].count++;
+    }
+  });
+  const radarCounts = RADAR_THEMES.map(t => themeStats[t].count);
+  const radarAvgs   = RADAR_THEMES.map(t => themeStats[t].count > 0
+    ? Math.round(themeStats[t].total / themeStats[t].count) : null);
+  const radarDisplay = radarAvgs.map(v => v === null ? 0 : v);
+  const hasAnyThemeData = radarCounts.some(c => c > 0);
+
   wrap.innerHTML = `
     <div class="graph-stats">
       <div class="stat-box"><div class="stat-val">${count}</div><div class="stat-label">プレイ回数</div></div>
       <div class="stat-box"><div class="stat-val">${avg}%</div><div class="stat-label">平均正答率</div></div>
       <div class="stat-box"><div class="stat-val">${best}%</div><div class="stat-label">最高正答率</div></div>
+    </div>
+    <div class="graph-canvas-wrap" style="margin-bottom:14px">
+      <div style="font-size:.95rem;font-weight:bold;color:#1a5f9e;margin-bottom:10px">🕸 分野別 正答率</div>
+      ${hasAnyThemeData
+        ? `<canvas id="radarChart" style="max-height:280px"></canvas>
+           <div style="text-align:center;font-size:.75rem;color:#aaa;margin-top:6px">※「ぜんぶ」モードのプレイは含まれません　●未挑戦の分野は灰色</div>`
+        : `<div style="text-align:center;color:#aaa;font-size:.9rem;padding:24px 0">分野を指定してプレイすると表示されます</div>`}
     </div>
     <div class="graph-canvas-wrap">
       <canvas id="scoreChart"></canvas>
@@ -1087,7 +1111,58 @@ async function renderGraph() {
       <button class="btn-clear" onclick="clearRecords()">記録をリセット</button>
     </div>`;
 
-  // Chart
+  // Radar chart
+  if (radarInstance) { radarInstance.destroy(); radarInstance = null; }
+  if (hasAnyThemeData) {
+    const pointColors = radarAvgs.map(v =>
+      v === null ? 'rgba(180,180,180,0.5)' : v >= 80 ? '#4caf50' : v >= 60 ? '#ff9800' : '#f44336');
+    const rCtx = document.getElementById('radarChart').getContext('2d');
+    radarInstance = new Chart(rCtx, {
+      type: 'radar',
+      data: {
+        labels: RADAR_THEMES,
+        datasets: [{
+          label: '正答率',
+          data: radarDisplay,
+          borderColor: '#4da6f5',
+          backgroundColor: 'rgba(77,166,245,0.12)',
+          pointBackgroundColor: pointColors,
+          pointBorderColor: pointColors,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          borderWidth: 2.5,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          r: {
+            min: 0, max: 100,
+            ticks: { stepSize: 20, callback: v => v + '%', font: { size: 10 }, backdropColor: 'transparent' },
+            pointLabels: { font: { size: 13, weight: 'bold' }, color: '#333' },
+            grid: { color: 'rgba(0,0,0,0.08)' },
+            angleLines: { color: 'rgba(0,0,0,0.1)' },
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const t = RADAR_THEMES[ctx.dataIndex];
+                const c = themeStats[t].count;
+                if (c === 0) return `${t}：未挑戦`;
+                return `${t}：${radarDisplay[ctx.dataIndex]}%（${c}回挑戦）`;
+              },
+              title: () => ''
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Line chart
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
   const ctx = document.getElementById('scoreChart').getContext('2d');
   chartInstance = new Chart(ctx, {
