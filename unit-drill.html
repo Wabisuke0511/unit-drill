@@ -225,6 +225,14 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
     <button class="theme-btn" data-theme="覆面算">覆面算</button>
   </div>
 
+  <div class="title-theme-label">問題数</div>
+  <div class="theme-bar" id="qcountBar">
+    <button class="theme-btn" data-count="1">1問</button>
+    <button class="theme-btn" data-count="3">3問</button>
+    <button class="theme-btn" data-count="5">5問</button>
+    <button class="theme-btn active" data-count="10">10問</button>
+  </div>
+
   <div class="title-btns">
     <button class="title-btn btn-start" onclick="startGame()">
       ▶ スタート
@@ -349,6 +357,7 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
 
 // ===== Screen navigation =====
 let currentTheme = 'ぜんぶ';
+let questionCount = 10;
 
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -363,6 +372,14 @@ document.getElementById('titleThemeBar').addEventListener('click', e => {
   document.querySelectorAll('#titleThemeBar .theme-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentTheme = btn.dataset.theme;
+});
+
+document.getElementById('qcountBar').addEventListener('click', e => {
+  const btn = e.target.closest('.theme-btn');
+  if (!btn) return;
+  document.querySelectorAll('#qcountBar .theme-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  questionCount = parseInt(btn.dataset.count, 10);
 });
 
 // ===== Utilities =====
@@ -725,46 +742,48 @@ const GENS = [
   { fn: genF, level: 5, themes: ['ぜんぶ', '覆面算'] },
 ];
 
-function buildSet(theme) {
+function buildSet(theme, count) {
+  count = count || 10;
   const avail = GENS.filter(g => g.themes.includes(theme));
-  if (avail.length === 0) return buildSet('ぜんぶ');
+  if (avail.length === 0) return buildSet('ぜんぶ', count);
   const byLevel = { 1: [], 2: [], 3: [], 4: [], 5: [] };
   avail.forEach(g => { if (byLevel[g.level]) byLevel[g.level].push(g); });
-  const total10 = [2, 2, 2, 2, 2];
+  const base = Math.floor(count / 5), extra = count % 5;
+  const slots = [0, 1, 2, 3, 4].map(i => base + (i < extra ? 1 : 0));
   const avPerLevel = [1, 2, 3, 4, 5].map(l => byLevel[l].length);
   let toRedist = 0;
-  for (let i = 0; i < 5; i++) { if (avPerLevel[i] === 0) { toRedist += total10[i]; total10[i] = 0; } }
+  for (let i = 0; i < 5; i++) { if (avPerLevel[i] === 0) { toRedist += slots[i]; slots[i] = 0; } }
   if (toRedist > 0) {
     const nonEmpty = [1, 2, 3, 4, 5].filter(l => byLevel[l].length > 0);
-    for (let i = 0; i < toRedist; i++) total10[nonEmpty[i % nonEmpty.length] - 1]++;
+    for (let i = 0; i < toRedist; i++) slots[nonEmpty[i % nonEmpty.length] - 1]++;
   }
   const selected = [];
   [1, 2, 3, 4, 5].forEach((l, i) => {
     const pool = shuffle([...byLevel[l]]);
-    for (let j = 0; j < total10[i] && pool.length > 0; j++) selected.push(pool[j % pool.length]);
+    for (let j = 0; j < slots[i] && pool.length > 0; j++) selected.push(pool[j % pool.length]);
   });
-  while (selected.length < 10) selected.push(shuffle([...avail])[0]);
+  while (selected.length < count) selected.push(shuffle([...avail])[0]);
   selected.sort((a, b) => a.level - b.level);
-  return selected.slice(0, 10).map(g => g.fn());
+  return selected.slice(0, count).map(g => g.fn());
 }
 
 // ===== Game State =====
 let questions = [], currentQ = 0, score = 0, answered = false, results = [];
 
 function startGame() {
-  questions = buildSet(currentTheme);
+  questions = buildSet(currentTheme, questionCount);
   currentQ = 0; score = 0; answered = false; results = [];
   showScreen('quiz');
   showQuestion();
 }
 
 function showQuestion() {
-  const q = questions[currentQ], n = currentQ + 1;
-  document.getElementById('progressLabel').textContent = `第${n}問 ／ 10問`;
-  document.getElementById('progressFill').style.width = `${(n - 1) * 10}%`;
+  const q = questions[currentQ], n = currentQ + 1, total = questions.length;
+  document.getElementById('progressLabel').textContent = `第${n}問 ／ ${total}問`;
+  document.getElementById('progressFill').style.width = `${(n - 1) / total * 100}%`;
 
   let html = `<div class="card">
-    <div class="q-num">第 ${n} 問 ／ 10問（レベル ${q.level}）</div>
+    <div class="q-num">第 ${n} 問 ／ ${total}問（レベル ${q.level}）</div>
     <div class="q-text">${q.questionText}</div>`;
 
   if (q.isFuku) {
@@ -784,7 +803,7 @@ function showQuestion() {
     <div class="btn-row" style="margin-top:14px">
       <button class="btn btn-check" id="btnCheck" onclick="checkAnswer()">こたえあわせ</button>
       <button class="btn btn-next" id="btnNext" onclick="nextQuestion()">
-        ${currentQ < 9 ? 'つぎの問題 →' : '結果を見る'}
+        ${currentQ < total - 1 ? 'つぎの問題 →' : '結果を見る'}
       </button>
     </div></div>`;
 
@@ -860,12 +879,12 @@ function quitGame() {
 function nextQuestion() {
   answered = false;
   currentQ++;
-  if (currentQ >= 10) showResult();
+  if (currentQ >= questions.length) showResult();
   else showQuestion();
 }
 
 async function showResult() {
-  const pct = Math.round(score / 10 * 100);
+  const pct = Math.round(score / questions.length * 100);
 
   const emoji = pct >= 90 ? '🏆' : pct >= 70 ? '⭕' : pct >= 50 ? '△' : '💪';
   const msg = pct >= 90 ? 'すばらしい！完璧に近いです！' : pct >= 70 ? 'よくできました！' : pct >= 50 ? 'もう少しがんばろう！' : 'また練習しよう！くじけないで！';
@@ -881,7 +900,7 @@ async function showResult() {
   document.getElementById('appArea').innerHTML = `
     <div class="card result-card">
       <div style="font-size:3rem">${emoji}</div>
-      <div class="result-score">${score} / 10問</div>
+      <div class="result-score">${score} / ${questions.length}問</div>
       <div class="result-pct">${pct}%</div>
       <div class="result-msg">${msg}</div>
       ${listHTML}
@@ -962,7 +981,7 @@ function saveLocal(rec) {
 }
 
 async function saveRecord(pct) {
-  const rec = { date: new Date().toISOString(), score: pct, theme: currentTheme };
+  const rec = { date: new Date().toISOString(), score: pct, theme: currentTheme, total_q: questions.length };
   saveLocal(rec);
   if (!getNickname()) return { ok: false, errMsg: 'あだな未設定（ローカルに保存しました）' };
   if (!sbClient) return { ok: false, errMsg: 'オフライン（ローカルに保存しました）' };
@@ -972,6 +991,7 @@ async function saveRecord(pct) {
       score:     pct,
       theme:     currentTheme,
       played_at: rec.date,
+      total_q:   questions.length,
     });
     if (error) return { ok: false, errMsg: error.message };
     return { ok: true };
@@ -986,11 +1006,11 @@ async function loadRecords() {
     try {
       const { data, error } = await sbClient
         .from('drill_records')
-        .select('played_at, score, theme')
+        .select('played_at, score, theme, total_q')
         .eq('user_id', getNickname())
         .order('played_at', { ascending: true });
       if (!error && data && data.length > 0) {
-        const local = data.map(r => ({ date: r.played_at, score: r.score, theme: r.theme }));
+        const local = data.map(r => ({ date: r.played_at, score: r.score, theme: r.theme, total_q: r.total_q || 10 }));
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(local)); } catch(e) {}
         return { data: local, error: null, fallback: false };
       }
@@ -1052,12 +1072,13 @@ async function renderGraph() {
   [...records].reverse().forEach(r => {
     const d = new Date(r.date);
     const dateStr = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    const correct = Math.round(r.score / 10); // score=pct, 10問固定
+    const totalQ = r.total_q || 10;
+    const correct = Math.round(r.score / 100 * totalQ);
     const cls = r.score >= 80 ? 'high' : r.score >= 60 ? 'mid' : 'low';
     histRows += `<tr>
       <td>${dateStr}</td>
       <td>${r.theme}</td>
-      <td>10問中 <strong>${correct}問</strong></td>
+      <td>${totalQ}問中 <strong>${correct}問</strong></td>
       <td><span class="hist-pct ${cls}">${r.score}%</span></td>
     </tr>`;
   });
