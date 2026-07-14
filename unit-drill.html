@@ -192,6 +192,10 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
   background:linear-gradient(135deg,#ff9800,#f44336);color:#fff;border:none;
   border-radius:14px;cursor:pointer;font-family:inherit}
 .nickname-ok-btn:active{transform:scale(.97)}
+/* ===== 中学受験モード ===== */
+.theme-btn-jk{border-color:#7b1fa2;color:#7b1fa2}
+.theme-btn-jk.active{background:#7b1fa2;border-color:#7b1fa2;color:#fff}
+.q-text-sm{font-size:1rem;line-height:1.75}
 /* ===== Responsive ===== */
 @media(max-width:520px){
   .unit-grid{grid-template-columns:1fr}
@@ -230,6 +234,7 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
     <button class="theme-btn" data-theme="面積">面積</button>
     <button class="theme-btn" data-theme="計算">計算</button>
     <button class="theme-btn" data-theme="覆面算">覆面算</button>
+    <button class="theme-btn theme-btn-jk" data-theme="中学受験">🎓 中学受験</button>
   </div>
 
   <div class="title-theme-label">問題数</div>
@@ -725,6 +730,130 @@ function genF() {
   return { isFuku: true, tableHTML: tbl, keyHTML, answerMap, symList, inputs: symList.length, level: 5, theme: '覆面算', questionText: '筆算の□にあてはまる数を求めなさい。' };
 }
 
+// ===== 中学受験 問題ジェネレーター =====
+
+// 和差算 (lv2)
+function genJK_wasa() {
+  const small = randInt(5, 40);
+  const diff = randInt(2, 15) * 2;
+  const big = small + diff, sum = big + small;
+  const askBig = randInt(0, 1) === 0;
+  return {
+    questionText: `2つの数の和は <strong>${sum}</strong>、差は <strong>${diff}</strong> です。<br>${askBig ? '大きい方' : '小さい方'}の数はいくつですか。`,
+    answers: [String(askBig ? big : small)],
+    inputs: 1, level: 2, theme: '中学受験', longText: true,
+  };
+}
+
+// 鶴亀算 (lv3)
+function genJK_tsurukame() {
+  const sc = pick([
+    { n1: '鶴', n2: '亀', l1: 2, l2: 4, u: '羽' },
+    { n1: 'うさぎ', n2: 'にわとり', l1: 4, l2: 2, u: '匹' },
+    { n1: 'いぬ', n2: 'カブトムシ', l1: 4, l2: 6, u: '匹' },
+  ]);
+  const c1 = randInt(3, 12), c2 = randInt(3, 12);
+  const total = c1 + c2, legs = sc.l1 * c1 + sc.l2 * c2;
+  return {
+    questionText: `${sc.n1}と${sc.n2}が合わせて <strong>${total}ひき</strong> います。<br>足の数の合計は <strong>${legs}本</strong> です。<br>${sc.n1}は何${sc.u}いますか。`,
+    answers: [String(c1)],
+    inputs: 1, level: 3, theme: '中学受験', longText: true,
+  };
+}
+
+// 植木算 (lv3)
+function genJK_ueki() {
+  const type = randInt(0, 2);
+  if (type === 0) {
+    const d = pick([3, 4, 5, 6, 8, 10]), N = randInt(5, 15), L = (N - 1) * d;
+    return {
+      questionText: `${L}mの道のかたがわに、${d}m間隔で木を植えます。<br>両はしにも植えると、木は何本必要ですか。`,
+      answers: [String(N)], inputs: 1, level: 3, theme: '中学受験', longText: true,
+    };
+  } else if (type === 1) {
+    const N = randInt(5, 15), d = pick([3, 4, 5, 6, 8, 10]), L = (N - 1) * d;
+    return {
+      questionText: `${L}mの道のかたがわに、両はしも含めて等間隔に木を${N}本植えます。<br>木と木の間隔は何mですか。`,
+      answers: [String(d)], inputs: 1, level: 3, theme: '中学受験', longText: true,
+    };
+  } else {
+    const d = pick([3, 4, 5, 6, 8, 10]), N = randInt(6, 20), L = N * d;
+    return {
+      questionText: `周囲 <strong>${L}m</strong> の池の周りに、${d}m間隔で木を植えます。<br>木は何本必要ですか。`,
+      answers: [String(N)], inputs: 1, level: 3, theme: '中学受験', longText: true,
+    };
+  }
+}
+
+// 消去算・2変数 (lv4)
+function genJK_shoukyo() {
+  const sc = pick([
+    { i1: 'りんご', i2: 'みかん' },
+    { i1: 'ノート', i2: 'えんぴつ' },
+    { i1: 'チョコレート', i2: 'あめ' },
+    { i1: 'ジュース', i2: 'お茶' },
+  ]);
+  const p = randInt(5, 25) * 10, q = randInt(3, 18) * 10;
+  if (p === q) return genJK_shoukyo();
+  const a1 = randInt(2, 5), b1 = randInt(2, 5);
+  const a2 = randInt(1, 4), b2 = randInt(3, 7);
+  if (a1 * b2 === a2 * b1) return genJK_shoukyo();
+  const X = a1 * p + b1 * q, Y = a2 * p + b2 * q;
+  const askFirst = randInt(0, 1) === 0;
+  return {
+    questionText: `${sc.i1}${a1}個と${sc.i2}${b1}個を買うと <strong>${X}円</strong>、<br>${sc.i1}${a2}個と${sc.i2}${b2}個を買うと <strong>${Y}円</strong> です。<br>${askFirst ? sc.i1 : sc.i2}1個はいくらですか。`,
+    answers: [String(askFirst ? p : q)],
+    inputs: 1, level: 4, theme: '中学受験', longText: true,
+  };
+}
+
+// 旅人算 (lv4)
+function genJK_tabibito() {
+  if (randInt(0, 1) === 0) {
+    // 向かい合って出会う（片方の速さを求める）
+    const sA = pick([40, 50, 60, 70, 80, 90]);
+    const sB = pick([40, 50, 60, 70, 80, 90]);
+    const t = randInt(3, 10), dist = (sA + sB) * t;
+    return {
+      questionText: `AさんとBさんは <strong>${dist}m</strong> 離れています。<br>2人が向かい合って同時に出発し、<strong>${t}分後</strong>に出会いました。<br>Bさんの速さは分速${sB}mです。<br>Aさんの速さは分速何mですか。`,
+      answers: [String(sA)], inputs: 1, level: 4, theme: '中学受験', longText: true,
+    };
+  } else {
+    // 追いかけて追いつく
+    let sA, sB, headT, tCatch, tries = 0;
+    do {
+      sA = pick([60, 70, 80, 90, 100]);
+      sB = pick([40, 50, 60, 70]);
+      if (sA <= sB) continue;
+      headT = randInt(3, 8);
+      tCatch = (sB * headT) / (sA - sB);
+      tries++;
+    } while ((!Number.isInteger(tCatch) || tCatch > 20) && tries < 100);
+    if (tries >= 100) return genJK_tabibito();
+    return {
+      questionText: `BさんはAさんより <strong>${headT}分早く</strong> 出発しました。<br>Bさんは分速${sB}m、Aさんは分速${sA}mで歩くとき、<br>AさんはBさんに何分後に追いつきますか。`,
+      answers: [String(tCatch)], inputs: 1, level: 4, theme: '中学受験', longText: true,
+    };
+  }
+}
+
+// 3変数消去算 (lv5) ─ 画像の問題タイプ
+function genJK_sanhensu() {
+  // 3人がけ(x), 4人がけ(y), 5人がけ(z)
+  // x+y+z=N, 3x+4y+5z=M, 4x+4y+7z=K (価格4/4/7万円)
+  // z = (K-4N)/3 は常に整数
+  const x = randInt(3, 12), y = randInt(3, 12), z = randInt(2, 8);
+  const N = x + y + z;
+  const M = 3*x + 4*y + 5*z;
+  const K = 4*x + 4*y + 7*z;
+  const ask = randInt(0, 1); // 0=5人がけ(z), 1=3人がけ(x)
+  return {
+    questionText: `3人がけ・4人がけ・5人がけの長いすが合わせて <strong>${N}脚</strong> あります。<br>全部で <strong>${M}人</strong> が座れます。<br>3人がけ・4人がけは1脚4万円、5人がけは1脚7万円で、<br>代金の合計は <strong>${K}万円</strong> でした。<br>${ask === 0 ? '5人がけ' : '3人がけ'}の長いすは何脚ありますか。`,
+    answers: [String(ask === 0 ? z : x)],
+    inputs: 1, level: 5, theme: '中学受験', longText: true,
+  };
+}
+
 // ===== Problem Pool =====
 const GENS = [
   { fn: genA1, level: 1, themes: ['ぜんぶ', '計算'] },
@@ -747,6 +876,12 @@ const GENS = [
   { fn: () => genE('面積'), level: 4, themes: ['ぜんぶ', '面積'] },
   { fn: () => genB2(5), level: 5, themes: ['ぜんぶ', '計算'] },
   { fn: genF, level: 5, themes: ['ぜんぶ', '覆面算'] },
+  { fn: genJK_wasa,      level: 2, themes: ['中学受験'] },
+  { fn: genJK_tsurukame, level: 3, themes: ['中学受験'] },
+  { fn: genJK_ueki,      level: 3, themes: ['中学受験'] },
+  { fn: genJK_shoukyo,   level: 4, themes: ['中学受験'] },
+  { fn: genJK_tabibito,  level: 4, themes: ['中学受験'] },
+  { fn: genJK_sanhensu,  level: 5, themes: ['中学受験'] },
 ];
 
 function buildSet(theme, count) {
@@ -791,7 +926,7 @@ function showQuestion() {
 
   let html = `<div class="card">
     <div class="q-num">第 ${n} 問 ／ ${total}問（レベル ${q.level}）</div>
-    <div class="q-text">${q.questionText}</div>`;
+    <div class="q-text${q.longText ? ' q-text-sm' : ''}">${q.questionText}</div>`;
 
   if (q.isFuku) {
     html += `<div class="fuku-wrap">${q.tableHTML}</div>${q.keyHTML}`;
