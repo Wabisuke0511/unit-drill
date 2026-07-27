@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="リース業界クイズ">
+<title>リース業界クイズ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',sans-serif;
+  background:linear-gradient(135deg,#e8f4ed 0%,#edf0fd 100%);min-height:100vh}
+.hidden{display:none}
+.screen{display:none;min-height:100vh;padding:16px}
+.screen.active{display:block}
+
+/* Title */
+.title-hero{text-align:center;padding:28px 16px 16px}
+.title-icon{font-size:3rem;margin-bottom:6px}
+.title-name{font-size:1.8rem;font-weight:900;color:#1a5f3e;
+  text-shadow:2px 2px 0 rgba(255,255,255,.9);margin-bottom:4px;letter-spacing:.03em}
+.title-sub{font-size:.9rem;color:#555;margin-bottom:22px}
+.nickname-bar{text-align:center;margin-bottom:14px;font-size:.95rem;color:#555}
+.nickname-bar span{font-weight:bold;color:#1a5f3e}
+.nickname-edit-btn{background:none;border:none;cursor:pointer;font-size:.9rem;
+  color:#888;padding:2px 6px;border-radius:6px;margin-left:4px}
+.section-label{text-align:center;font-size:.95rem;font-weight:bold;color:#1a5f3e;
+  margin-bottom:8px;margin-top:4px}
+
+/* Chapter grid */
+.ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  max-width:480px;margin:0 auto 18px}
+.ch-btn{padding:10px 6px;border:2.5px solid #a0c8b0;border-radius:14px;
+  background:#fff;font-size:.82rem;cursor:pointer;color:#1a5f3e;font-weight:bold;
+  transition:.15s;text-align:center;line-height:1.3}
+.ch-btn.active{background:#1a5f3e;color:#fff;border-color:#1a5f3e}
+.ch-btn.mix{grid-column:1/-1;font-size:.95rem;padding:12px;
+  border-color:#7b1fa2;color:#7b1fa2}
+.ch-btn.mix.active{background:#7b1fa2;border-color:#7b1fa2;color:#fff}
+
+/* Count bar */
+.count-bar{display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.count-btn{padding:9px 20px;border:2.5px solid #a0c8b0;border-radius:22px;
+  background:#fff;font-size:1rem;cursor:pointer;color:#1a5f3e;font-weight:bold;transition:.15s}
+.count-btn.active{background:#1a5f3e;color:#fff;border-color:#1a5f3e}
+
+/* Big buttons */
+.title-btns{display:flex;flex-direction:column;gap:12px;max-width:380px;margin:0 auto;padding-bottom:32px}
+.title-btn{width:100%;padding:16px;font-size:1.2rem;font-weight:bold;border:none;
+  border-radius:16px;cursor:pointer;font-family:inherit;transition:.15s;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.title-btn:active{transform:scale(.97)}
+.btn-start{background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff;
+  box-shadow:0 5px 18px rgba(46,125,50,.35)}
+.btn-graph{background:linear-gradient(135deg,#7b1fa2,#3949ab);color:#fff;
+  box-shadow:0 5px 18px rgba(123,31,162,.3)}
+
+/* Nickname modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;
+  display:flex;align-items:center;justify-content:center;padding:16px}
+.overlay.hidden{display:none}
+.modal{background:#fff;border-radius:20px;padding:28px 24px;max-width:360px;
+  width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18);text-align:center}
+.modal h2{font-size:1.2rem;color:#1a5f3e;margin-bottom:8px}
+.modal p{font-size:.88rem;color:#666;margin-bottom:16px;line-height:1.5}
+.modal-input{width:100%;height:50px;font-size:1.2rem;text-align:center;
+  border:2.5px solid #a0c8b0;border-radius:12px;outline:none;padding:0 10px;
+  font-family:inherit;margin-bottom:14px}
+.modal-input:focus{border-color:#43a047;box-shadow:0 0 0 3px rgba(67,160,71,.2)}
+.modal-ok{width:100%;padding:13px;font-size:1.1rem;font-weight:bold;
+  background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff;border:none;
+  border-radius:13px;cursor:pointer;font-family:inherit}
+
+/* Quiz screen */
+.quiz-header{display:flex;align-items:center;justify-content:space-between;
+  max-width:660px;margin:0 auto 8px;gap:12px}
+.quit-btn{padding:8px 14px;background:#fff;border:2px solid #e57373;border-radius:12px;
+  font-size:.9rem;font-weight:bold;color:#c62828;cursor:pointer;white-space:nowrap}
+.quit-btn:active{transform:scale(.96)}
+.prog-label{font-size:.85rem;color:#555;text-align:center}
+.progress-wrap{max-width:660px;margin:0 auto 12px}
+.progress-bar{background:#d0ead8;border-radius:10px;height:12px;overflow:hidden}
+.progress-fill{background:linear-gradient(90deg,#43a047,#7b1fa2);height:100%;
+  transition:width .4s;border-radius:10px}
+.card{background:#fff;border-radius:18px;box-shadow:0 4px 18px rgba(0,0,0,.1);
+  padding:20px 18px;margin-bottom:12px;max-width:660px;margin-left:auto;margin-right:auto}
+.q-meta{font-size:.78rem;color:#888;margin-bottom:4px}
+.q-text{font-size:1.2rem;font-weight:bold;color:#1a1a1a;margin-bottom:16px;line-height:1.6}
+
+/* Choices */
+.choices{display:flex;flex-direction:column;gap:10px}
+.choice-btn{width:100%;padding:13px 16px;border:2.5px solid #c8e6c9;border-radius:14px;
+  background:#fff;font-size:1rem;cursor:pointer;font-family:inherit;text-align:left;
+  font-weight:bold;color:#333;transition:.15s;line-height:1.4}
+.choice-btn:not(.locked):hover{border-color:#43a047;background:#f1f8f1}
+.choice-btn:not(.locked):active{transform:scale(.98)}
+.choice-btn.correct{background:#e8f5e9;border-color:#2e7d32;color:#2e7d32}
+.choice-btn.wrong{background:#ffebee;border-color:#c62828;color:#c62828}
+.choice-btn.reveal{background:#e8f5e9;border-color:#2e7d32;color:#2e7d32;opacity:.85}
+.choice-btn.locked{cursor:default}
+
+/* Feedback */
+.feedback{text-align:center;padding:10px 0 2px;display:none}
+.feedback .mark{font-size:1.8rem;font-weight:bold}
+.feedback .exp{font-size:.88rem;color:#555;margin-top:4px;line-height:1.5;text-align:left}
+.feedback.show{display:block}
+
+/* Next button */
+.btn-next{display:none;width:100%;max-width:660px;margin:0 auto;
+  padding:15px;font-size:1.1rem;font-weight:bold;border:none;
+  border-radius:15px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(135deg,#43a047,#1976d2);color:#fff;
+  box-shadow:0 4px 12px rgba(67,160,71,.3)}
+.btn-next.show{display:block}
+.btn-next:active{transform:scale(.97)}
+
+/* Result */
+.result-card{text-align:center;padding:24px 18px}
+.result-score{font-size:2.5rem;font-weight:bold;color:#1a5f3e;margin:10px 0 4px}
+.result-pct{font-size:1.8rem;font-weight:bold;color:#e65100;margin-bottom:8px}
+.result-msg{font-size:1.1rem;color:#555;margin-bottom:16px}
+.result-chaps{text-align:left;margin:0 auto 16px;max-width:440px}
+.chap-row{display:flex;justify-content:space-between;padding:6px 0;
+  border-bottom:1px solid #eee;font-size:.9rem}
+.chap-row:last-child{border-bottom:none}
+.chap-score{font-weight:bold}
+.chap-score.hi{color:#2e7d32}.chap-score.mid{color:#f57c00}.chap-score.lo{color:#c62828}
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.btn{padding:13px 24px;font-size:1rem;font-weight:bold;border:none;
+  border-radius:13px;cursor:pointer;font-family:inherit;transition:.15s;color:#fff}
+.btn:active{transform:scale(.96)}
+.btn-retry{background:linear-gradient(135deg,#43a047,#2e7d32)}
+.btn-home{background:linear-gradient(135deg,#7b1fa2,#3949ab)}
+.save-status{font-size:.82rem;padding:5px 12px;border-radius:8px;display:inline-block;margin-top:8px}
+.save-ok{background:#e8f5e9;color:#2e7d32}
+.save-fail{background:#ffebee;color:#c62828}
+
+/* Graph screen */
+.sub-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;
+  max-width:660px;margin-left:auto;margin-right:auto}
+.back-btn{padding:8px 14px;background:#fff;border:2px solid #a0c8b0;border-radius:12px;
+  font-size:.95rem;font-weight:bold;color:#1a5f3e;cursor:pointer;white-space:nowrap}
+.back-btn:active{transform:scale(.96)}
+.sub-title{font-size:1.1rem;font-weight:bold;color:#1a5f3e}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  max-width:660px;margin:0 auto 14px}
+.stat-box{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08);
+  padding:12px 8px;text-align:center}
+.stat-val{font-size:1.6rem;font-weight:bold;color:#1a5f3e}
+.stat-label{font-size:.75rem;color:#666;margin-top:2px}
+.hist-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08);
+  padding:14px;max-width:660px;margin:0 auto 14px}
+.hist-title{font-size:.95rem;font-weight:bold;color:#1a5f3e;margin-bottom:8px}
+.hist-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.hist-table th{background:#f0f8f2;color:#555;padding:6px;text-align:left;
+  border-bottom:2px solid #c8e6c9;white-space:nowrap}
+.hist-table td{padding:7px 6px;border-bottom:1px solid #f0f0f0}
+.hist-table tr:last-child td{border-bottom:none}
+.hpct{font-weight:bold}
+.hpct.hi{color:#2e7d32}.hpct.mid{color:#f57c00}.hpct.lo{color:#c62828}
+.btn-clear{background:#fff;border:2px solid #f44336;color:#f44336;
+  border-radius:10px;padding:7px 16px;font-size:.85rem;font-weight:bold;
+  cursor:pointer;margin-top:10px;display:block;margin-left:auto}
+
+@media(max-width:480px){
+  .ch-grid{grid-template-columns:1fr}
+  .ch-btn.mix{grid-column:1}
+  .q-text{font-size:1.05rem}
+  .choice-btn{font-size:.92rem;padding:11px 12px}
+  .title-name{font-size:1.5rem}
+  .stat-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- TITLE SCREEN -->
+<div class="screen active" id="screen-title">
+  <div class="title-hero">
+    <div class="title-icon">🏢</div>
+    <div class="title-name">リース業界クイズ</div>
+    <div class="title-sub">「日本で一番やさしいリースの本」で理解を深めよう</div>
+  </div>
+
+  <div class="nickname-bar" id="nicknameBar">
+    プレイヤー：<span id="nicknameDisplay">（未設定）</span>
+    <button class="nickname-edit-btn" onclick="showNicknameModal(true)">✏️</button>
+  </div>
+
+  <div class="section-label">📚 チャプターを選ぼう</div>
+  <div class="ch-grid" id="chGrid">
+    <button class="ch-btn mix active" data-ch="mix">🎲 全章ミックス</button>
+    <button class="ch-btn" data-ch="1">Ch1<br>新リース会計基準</button>
+    <button class="ch-btn" data-ch="2">Ch2<br>リース業界の最新動向</button>
+    <button class="ch-btn" data-ch="3">Ch3<br>リースの基礎知識</button>
+    <button class="ch-btn" data-ch="4">Ch4<br>ビジネスモデル</button>
+    <button class="ch-btn" data-ch="5">Ch5<br>利用される業界</button>
+    <button class="ch-btn" data-ch="6">Ch6<br>リース発サービス</button>
+    <button class="ch-btn" data-ch="7">Ch7<br>仕事と組織</button>
+    <button class="ch-btn" data-ch="8">Ch8<br>業界の全体像</button>
+    <button class="ch-btn" data-ch="9">Ch9<br>必要な知識・スキル</button>
+    <button class="ch-btn" data-ch="10">Ch10<br>課題と展望</button>
+  </div>
+
+  <div class="section-label">🔢 問題数</div>
+  <div class="count-bar" id="countBar">
+    <button class="count-btn" data-cnt="5">5問</button>
+    <button class="count-btn active" data-cnt="10">10問</button>
+    <button class="count-btn" data-cnt="all">全問</button>
+  </div>
+
+  <div class="title-btns">
+    <button class="title-btn btn-start" onclick="startQuiz()">▶ スタート</button>
+    <button class="title-btn btn-graph" onclick="showScreen('graph')">📊 記録を見る</button>
+  </div>
+</div>
+
+<!-- NICKNAME MODAL -->
+<div class="overlay hidden" id="nicknameOverlay">
+  <div class="modal">
+    <h2>👤 ニックネームを入力</h2>
+    <p>同じニックネームを使えば<br>記録が引き継げます</p>
+    <input class="modal-input" id="nicknameInput" type="text" maxlength="20"
+      placeholder="例：田中" autocomplete="off">
+    <button class="modal-ok" onclick="confirmNickname()">決定 ✓</button>
+  </div>
+</div>
+
+<!-- QUIZ SCREEN -->
+<div class="screen" id="screen-quiz">
+  <div class="quiz-header">
+    <button class="quit-btn" onclick="quitQuiz()">✕ やめる</button>
+    <div class="prog-label" id="progLabel"></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progFill" style="width:0%"></div>
+    </div>
+  </div>
+  <div id="quizArea"></div>
+  <button class="btn-next" id="btnNext" onclick="nextQuestion()">次の問題 →</button>
+</div>
+
+<!-- RESULT SCREEN -->
+<div class="screen" id="screen-result">
+  <div class="card result-card" id="resultCard"></div>
+</div>
+
+<!-- GRAPH SCREEN -->
+<div class="screen" id="screen-graph">
+  <div class="sub-header">
+    <button class="back-btn" onclick="showScreen('title')">← もどる</button>
+    <span class="sub-title">📊 記録</span>
+  </div>
+  <div id="graphArea"></div>
+</div>
+
+<script>
+// ===== QUIZ DATA =====
+const CHAPTERS = [
+  { id:1, name:'新リース会計基準の全貌' },
+  { id:2, name:'リース業界の最新動向' },
+  { id:3, name:'リースの基礎知識' },
+  { id:4, name:'リースのビジネスモデル' },
+  { id:5, name:'リースが利用される業界' },
+  { id:6, name:'リース業界から生まれたサービス' },
+  { id:7, name:'リース会社の仕事と組織' },
+  { id:8, name:'リース業界の全体像' },
+  { id:9, name:'リース業界で求められる知識・スキル' },
+  { id:10, name:'リース業界の課題と展望' },
+];
+
+const ALL_QS = [
+// ===== Ch1 =====
+{ch:1,q:'新リース会計基準が施行されるのはいつか？',
+ c:['2027年4月','2025年1月','2026年10月','2028年3月'],a:0,
+ e:'2027年4月から新リース会計基準が施行され、リース業界にとって最大の変革となります。'},
+{ch:1,q:'新リース会計基準でリース判定に使う2つのポイントは？',
+ c:['「特定」と「支配」','「所有」と「支配」','「特定」と「占有」','「登記」と「管理」'],a:0,
+ e:'「資産が特定されている（特定）」かつ「その資産から生まれる経済的利益のほとんどを得られる（支配）」の両方を満たすとリース判定されます。'},
+{ch:1,q:'減価償却の方法として正しい組み合わせは？',
+ c:['定額法と定率法','定額法と定数法','均等法と逓減法','直線法と曲線法'],a:0,
+ e:'定額法は毎年同じ額を費用化、定率法は最初が高く徐々に減少。どちらも最終的には0円になります。'},
+{ch:1,q:'リースを「オンバランス」にするとはどういう意味か？',
+ c:['貸借対照表に資産・負債として計上すること','リース契約を開始すること','オンライン契約に切り替えること','リース料の支払いを開始すること'],a:0,
+ e:'オンバランスとは、リース物件を貸借対照表（バランスシート）に計上すること。新会計基準ではオペレーティング・リースも原則オンバランスになります。'},
+{ch:1,q:'新リース会計基準と中小企業の関係について正しいのは？',
+ c:['中小企業にはまったく関係ない','即座に全面適用される','2年の猶予期間がある','売上高100億円未満のみ免除'],a:0,
+ e:'新リース会計基準は中小企業には適用されません（「企業の規模によって変わるルール」の一つ）。'},
+{ch:1,q:'新リース会計基準でリースの定義が拡大された主な内容は？',
+ c:['店舗の家賃・駐車場代など実質的なリース取引も対象に','銀行からの融資も対象に','設備の買取も含まれる','フランチャイズ契約も対象に'],a:0,
+ e:'旧基準は「建物や設備のリース取引」に限定されていましたが、新基準では実質的なリース取引（家賃・駐車場代など）もすべて対象になりました。'},
+{ch:1,q:'旧来のリース会計基準が問題視されていた最大の理由は？',
+ c:['グローバルスタンダードとかけ離れていた','税率の計算が複雑だった','中小企業に不利だった','オペレーティング・リースを認めていなかった'],a:0,
+ e:'日本のリース会計基準は国際基準（IFRS）とかけ離れており、グローバルに事業展開する企業にとって問題でした。'},
+{ch:1,q:'新リース会計基準でリース期間を決める際、延長可能性が高い場合はどう扱うか？',
+ c:['延長期間も含めてリース期間として貸借対照表に計上する','延長分は別契約として処理する','延長分は全額経費で処理する','延長の可能性は考慮しない'],a:0,
+ e:'賃借期間を延長する可能性が高い場合、その延長期間も含めてリース期間として見積もり、資産として計上する必要があります。'},
+
+// ===== Ch2 =====
+{ch:2,q:'サーキュラーエコノミーとリース業界が相性がよい最大の理由は？',
+ c:['使用終了後に製品を引き取るためほぼ100%回収できる','リース料が他の手段より安いため','政府の補助金が受けられるため','税制優遇があるため'],a:0,
+ e:'リース契約は期間満了後に物件を引き取るため、資源を確実に回収できます。これはサーキュラーエコノミー（循環経済）と非常に相性がよいのです。'},
+{ch:2,q:'官公庁がリースを利用する主なメリットは？',
+ c:['コスト削減の効果','品質向上','雇用の創出','税収の増加'],a:0,
+ e:'官公庁がリースを利用することで、設備の初期費用を抑え、維持管理コストを含めたトータルコストを削減できます。'},
+{ch:2,q:'学校でリースが広がっている主な物品として正しいのは？',
+ c:['体育館のエアコン・タブレットPC','教科書・給食設備','校舎の建設・プール','バス・給食車'],a:0,
+ e:'GIGAスクール構想でのタブレット配備や、体育館のエアコン設置など、教育現場でリースの活用が増えています。'},
+{ch:2,q:'リース取引のピーク時（バブル最盛期）の取扱高はいくら？',
+ c:['8.8兆円','5.5兆円','12兆円','3.3兆円'],a:0,
+ e:'1991年のバブル最盛期にリースの取扱高は8.8兆円に達しました。現在は5兆円台に落ち着いています。'},
+{ch:2,q:'現在のリース取扱高はおよそいくらか？',
+ c:['5兆円台','8兆円台','2兆円台','10兆円台'],a:0,
+ e:'リース取扱高はピーク時の8.8兆円から現在は5兆円台に推移しています。'},
+{ch:2,q:'「シェアビジネス」や「サブスク」とリースの関係として正しいのは？',
+ c:['リースがこれらの新しいビジネスを支えている','シェアビジネスはリースと無関係','サブスクはリースに取って代わった','リースはシェアビジネスを妨害する'],a:0,
+ e:'シェアリングサービスやサブスクリプションサービスで使われる設備・車両などはリースで調達されるケースが多く、リース業界が支えています。'},
+{ch:2,q:'コロナ禍でリース業界が発揮したとされる強みは？',
+ c:['長期契約による安定した収益基盤','短期融資への対応力','新規顧客の急速な獲得','海外展開の加速'],a:0,
+ e:'コロナ禍でも長期契約のリースは解約されにくく、安定した収益を確保できたことでリース業界の強さが際立ちました。'},
+{ch:2,q:'リース業界とESG経営の関係として正しいのは？',
+ c:['CSR・ESG経営を実現するためリースが環境問題に正面から取り組んでいる','ESG投資はリース会社には関係ない','ESGとリースは利益相反する','リース会社はESGに消極的'],a:0,
+ e:'サーキュラーエコノミーへの対応や環境負荷軽減など、リース業界はESG経営を実践しやすいビジネスモデルを持っています。'},
+
+// ===== Ch3 =====
+{ch:3,q:'リースの基本的な仕組みとして正しいのは？',
+ c:['リース会社が代わりに買って利用者に貸す','銀行が資金を貸してユーザーが自分で買う','メーカーが直接ユーザーに貸し出す','政府補助金で設備を購入してユーザーに貸す'],a:0,
+ e:'リースは「誰かの代わりに買って貸す」のが基本。リース会社がサプライヤーから購入し、ユーザーに貸し出します。あらゆる業界が関わる仕組みです。'},
+{ch:3,q:'世界で最初のリース会社が設立されたのはいつ・どこか？',
+ c:['1952年・アメリカ','1963年・日本','1945年・イギリス','1970年・ドイツ'],a:0,
+ e:'1952年にアメリカで世界初のリース会社が誕生。産業設備をリースするビジネスとして始まりました。'},
+{ch:3,q:'日本で最初のリース会社が誕生したのはいつか？',
+ c:['1963年','1952年','1975年','1985年'],a:0,
+ e:'1963年、リース・インターナショナル（現オリックス）が設立され、日本初のリース会社が誕生しました。'},
+{ch:3,q:'リース取引の約何割がファイナンス・リースか？',
+ c:['9割','5割','3割','7割'],a:0,
+ e:'日本のリース契約の約9割近くがファイナンス・リースといわれています。'},
+{ch:3,q:'ファイナンス・リースの2つの特徴として正しいのは？',
+ c:['中途解約不可（ノンキャンセラブル）かつリース料総額がフルペイアウト','中途解約自由でリース料が安い','残価が設定される','短期利用に向いている'],a:0,
+ e:'ファイナンス・リースは①中途解約ができない（ノンキャンセラブル）、②リース料総額が物件価額に相当する（フルペイアウト）の2条件を満たします。'},
+{ch:3,q:'オペレーティング・リースに向いている物件の条件は？',
+ c:['しっかりとした中古市場があるもの（例：自動車・航空機）','新品でないと価値がないもの','デジタル機器に限る','不動産に限定される'],a:0,
+ e:'中古市場がある物件はリース期間中に中途解約や残価売却ができるためオペレーティング・リースに向いています。自動車、航空機、船舶などが代表例。'},
+{ch:3,q:'リースとレンタルの最大の違いは？',
+ c:['リースはユーザーが物件を選び長期使用・レンタルは短期で既製品を借りる','リースは個人向け・レンタルは法人向け','リースは安い・レンタルは高い','リースは国内のみ・レンタルは海外でも使える'],a:0,
+ e:'リースはユーザーが選んだ特定の物件を長期間借りる（数年単位）のに対し、レンタルは短期間（日・週単位）で既製品を借りるものです。'},
+{ch:3,q:'リースが「日本経済の高度成長を支えた」といわれる理由は？',
+ c:['資金調達が難しい中小企業が設備投資できるようにした','大企業が節税するための手段だったから','国が義務化したから','輸出を促進したから'],a:0,
+ e:'リース業界は産業機械のリースから始まり、資金力の乏しい中小企業が最新設備を導入するのを可能にし、日本の高度経済成長を支えました。'},
+
+// ===== Ch4 =====
+{ch:4,q:'リース会社の主な収益源は何か？',
+ c:['手数料（リース料の中の利益分）','リース物件の転売益','金融機関への再融資','保険料収入'],a:0,
+ e:'リース会社はユーザーからリース料を受け取り、そこに含まれる手数料（マージン）が収益になります。'},
+{ch:4,q:'リース料に含まれないものは？',
+ c:['ユーザーの人件費','物件価格（取得価額）','金利（資金調達コスト）','固定資産税などの税金'],a:0,
+ e:'リース料には「物件価格・金利・税金・保険料・手数料」が含まれています。ユーザー自身の人件費は含まれません。'},
+{ch:4,q:'リース期間満了後の主な選択肢として正しいのは？',
+ c:['再リース または 契約終了（返却）','必ず返却のみ','自動的に購入','必ず新機種に更新'],a:0,
+ e:'リース期間満了後はユーザーが「再リース（継続）」か「契約終了（返却）」かを選べます。'},
+{ch:4,q:'リース会社が「無担保」でリース契約をできる理由は？',
+ c:['リース物件自体がリース会社の所有物であり担保になるから','政府保証があるから','保険で全額カバーされるから','ユーザーの信用格付けが常に高いから'],a:0,
+ e:'リース物件はリース会社が購入するため、物件自体がリース会社の資産（担保）となります。そのため担保なしで契約できます。'},
+{ch:4,q:'リース物件が故障した場合、修理の責任を負うのは誰か？',
+ c:['サプライヤー（メーカー・販売会社）','リース会社','ユーザー','保険会社'],a:0,
+ e:'リース物件の修理責任はサプライヤー（メーカーまたは販売会社）が負います。リース会社は仲介者であり修理責任はありません。'},
+{ch:4,q:'リース料の高安を比較する指標「リース料率」の計算式は？',
+ c:['リース料 ÷ 取得価額（物件価格）','リース料 × 利用期間','取得価額 ÷ リース期間','リース料 − 保険料'],a:0,
+ e:'リース料率＝月額リース料 ÷ 取得価額。例えば100万円の物件で月2万円なら料率2%。複数社を同条件で比較できます。'},
+{ch:4,q:'リース会社はリース物件を購入するための資金をどこから調達するか？',
+ c:['銀行からの借入・社債発行・資産担保証券など多様な方法','株式発行のみ','政府の低利融資のみ','ユーザーから前払いを受ける'],a:0,
+ e:'リース会社は銀行借入、社債発行、ABS（資産担保証券）など多様な方法で資金調達を行い、物件購入に充てます。'},
+{ch:4,q:'リース期間満了後、リース物件はどのような流れをたどるか？',
+ c:['再リース・中古市場での売却・リサイクルなど多様な活用がされる','必ず廃棄される','自動的にユーザーに所有権が移る','メーカーに返還される'],a:0,
+ e:'リース期間終了後の物件は再リース、他のユーザーへの転貸、中古市場での売却、リサイクルなど多様な経路で活用されます。'},
+
+// ===== Ch5 =====
+{ch:5,q:'「リースといえばこれ」というイメージが最も定着しているオフィス機器は？',
+ c:['コピー機・複合機（FAX含む）','パソコン本体','電話機','モニター'],a:0,
+ e:'リース＝コピー機・複合機のイメージが定着したのは、オフィス機器業界がベンダーリースなどを積極活用し普及させたからです。'},
+{ch:5,q:'世界の航空機のうち、リースされている割合はおよそ何割か？',
+ c:['4割','1割','7割','9割'],a:0,
+ e:'世界の航空機の約4割がリース物件です。航空機は高額かつ中古市場も整備されているため、オペレーティング・リースに向いています。'},
+{ch:5,q:'医療業界でリースが伸びている理由として正しいのは？',
+ c:['高額医療機器の導入コスト軽減と機器の更新頻度の高さ','医療費の削減義務','政府の義務化','医師不足への対応'],a:0,
+ e:'MRI・CT・手術支援ロボットなど高額医療機器を導入する際にリースを使えば初期費用を抑えられ、技術進化にも対応しやすくなります。'},
+{ch:5,q:'再生可能エネルギー事業でリースされる物件として正しいのは？',
+ c:['風車・太陽光パネル・水素カーなど','化石燃料発電機','原子力発電所','火力発電タービン'],a:0,
+ e:'脱炭素・再生可能エネルギーへの移行に伴い、風力発電設備・太陽光パネル・水素車両など、プロジェクト全体をリースにする事例が増えています。'},
+{ch:5,q:'建設業界がリースを利用する主な理由は？',
+ c:['必要な時だけ建機を使え保有コストを削減できる','建設基準法で義務付けられているから','建機メーカーが販売していないから','税制優遇が最大だから'],a:0,
+ e:'建設現場では工期に合わせて様々な建機が必要になります。すべてを購入・保有するよりリースで必要な期間だけ使う方が効率的です。'},
+{ch:5,q:'運輸業界でリースが活発な理由として正しいのは？',
+ c:['メンテナンス付きリースが車両管理コストを大きく削減できる','車両購入が法律で禁止されているから','車両価格が下落しているから','燃費規制への対応だから'],a:0,
+ e:'トラック・バスなどの車両はメンテナンスコストが高く、整備・保険・車検なども含めたメンテナンスリースがコスト削減に効果的です。'},
+{ch:5,q:'製造業とリース業界の歴史的な関係として正しいのは？',
+ c:['リースの歴史を作ってきた最も古くからの主要顧客層','製造業はリースをほとんど使わない','最近リースを始めた新しい顧客層','製造業専用の特別なリース商品がある'],a:0,
+ e:'リース業界は産業機械のリースから始まりました。製造業は最初からリースを積極活用してきた、歴史的なパートナーです。'},
+{ch:5,q:'スタートアップ企業がリースを活用するメリットは？',
+ c:['初期投資を抑えて必要な設備を揃え事業を素早く立ち上げられる','スタートアップにはリース審査が通りやすい','政府がスタートアップのリースを無利子にしているから','リースはスタートアップのみ対象だから'],a:0,
+ e:'設備購入の初期費用を抑えられるリースは、資金が限られるスタートアップにとって非常に有効な資金調達手段です。'},
+
+// ===== Ch6 =====
+{ch:6,q:'メーカーや販売会社（ベンダー）がリース契約を代行する仕組みを何というか？',
+ c:['ベンダーリース','セールスリース','メーカーリース','ディーラーリース'],a:0,
+ e:'ベンダーリースとは、物品の販売会社がリース契約の手続きを代行する仕組みです。オフィス機器などで広く活用されています。'},
+{ch:6,q:'省エネ施設に関連してリース会社が参入している事業の名称は？',
+ c:['ESCO事業','ESG投資事業','PFI事業','EPC事業'],a:0,
+ e:'ESCO（Energy Service Company）事業は、省エネ対策の設計から設備導入・維持管理まで一括して請け負い、削減できたエネルギーコストから費用を回収するビジネスです。'},
+{ch:6,q:'公共施設の建設・運営にリース会社が参画できる仕組みは何か？',
+ c:['PFI（プライベート・ファイナンス・イニシアティブ）','PPP（パブリックプライベートパートナーシップ）のみ','官民ファンド','特区制度'],a:0,
+ e:'PFI（Private Finance Initiative）は民間の資金・ノウハウを公共施設の整備・運営に活かす仕組みで、リース会社も積極的に参画しています。'},
+{ch:6,q:'リース物件の再利用に関連してリース会社が展開している新事業は？',
+ c:['リユース・リサイクル事業','新品のみの販売事業','廃棄専門サービス','輸入代行事業'],a:0,
+ e:'リース会社は多数の物件を扱うため、再利用・部品取り・原料回収などのリユース・リサイクル事業のノウハウを蓄積しています。'},
+{ch:6,q:'大企業でも「リース離れ」が進む中、リースが依然主流の物件の典型例は？',
+ c:['パソコン（IT機器）','工場の大型機械','不動産','自動車'],a:0,
+ e:'パソコンはセットアップ・資産管理・廃棄など手間がかかる物件の代表例。ライフサイクルマネジメントを提供できるリースに価値があります。'},
+{ch:6,q:'集金代行サービスをリース会社が提供できる理由は？',
+ c:['長年の金融ノウハウと与信管理能力があるため','リース物件に付帯するサービスとして義務化されているから','銀行が集金代行を禁止されているから','政府の指示によるサービスだから'],a:0,
+ e:'リース会社は長年にわたりリース料の回収（与信管理・集金）を行ってきたため、そのノウハウを活かした集金代行サービスを提供しています。'},
+{ch:6,q:'IT導入でリース会社が「リース＋α」として提供する代表的なサービスは？',
+ c:['セットアップ・資産管理・保守サポートなどのライフサイクルマネジメント','ソフトウェア開発','データセンターの設置','クラウドサービスの提供のみ'],a:0,
+ e:'リース物件の「計画・調達・セットアップ・運用・保守・廃棄」まで全工程をサポートするライフサイクルマネジメントがリース＋αの代表例です。'},
+{ch:6,q:'リース業界がフィンテックに積極的に取り組む理由は？',
+ c:['異業種との連携で新たな金融サービスを生み出すため','フィンテックは法律でリース会社に義務付けられているから','フィンテック企業への対抗策として','政府が支援しているから'],a:0,
+ e:'リース会社は顧客との長期的な関係と金融ノウハウを持つため、フィンテックとのコラボレーションで新たな金融・決済サービスを展開しやすいのです。'},
+
+// ===== Ch7 =====
+{ch:7,q:'リース会社の新入社員が最初に配属されることが多い部門は？',
+ c:['エリア営業','審査部','法務部','財務部'],a:0,
+ e:'エリア営業は特定の地域を担当し幅広い業種のユーザーに対応するため、新入社員の登竜門となっています。'},
+{ch:7,q:'「専門営業」とはどのような職種か？',
+ c:['医療・航空機・船舶など特定の業界に特化した営業職','大企業専門の営業職','海外担当の営業職','新規顧客開拓専門の営業職'],a:0,
+ e:'専門営業は医療、環境、航空機、船舶、工場、農業など特定業界に特化し、その業界の専門知識を持って提案を行います。'},
+{ch:7,q:'リース会社の審査部の主な役割は何か？',
+ c:['ユーザーの与信（信用力）を見極める','リース物件の価格交渉','社員の採用','新商品の開発'],a:0,
+ e:'審査部はユーザーが無事にリース料を払い続けられるかどうか（与信）を見極め、リスクを管理する重要な部門です。'},
+{ch:7,q:'リース会社の財務部の主な2つの役割は？',
+ c:['資金の調達と運用','売上管理と税務申告','不動産管理と保険手続き','株主対応と広報'],a:0,
+ e:'財務部は物件購入に必要な「資金の調達」（銀行借入・社債発行等）と、余剰資金の「運用」の2本柱を担います。'},
+{ch:7,q:'「サプライヤー営業」とは何か？',
+ c:['リース物件のメーカー・販売会社に対して行う営業','材料仕入れを担当する部門','海外仕入れ専門の部門','大型物件専門の営業'],a:0,
+ e:'サプライヤー営業は物件を製造・販売するメーカーや販売会社（サプライヤー）に働きかけ、ベンダーリースの拡大などを図る営業です。'},
+{ch:7,q:'リース会社の広報部の主な役割は？',
+ c:['自社の情報を広く内外に発信する','法律問題を処理する','資金を調達する','物件の審査をする'],a:0,
+ e:'広報部は会社のブランドイメージ向上や情報発信、メディア対応などを行います。リース業界の認知度向上にも重要な役割を担います。'},
+{ch:7,q:'リース会社の法務部が主に扱う業務は？',
+ c:['リース契約に関するトラブルの解決・法的リスク管理','従業員の労働争議のみ','物件の修理手配','税務調査への対応のみ'],a:0,
+ e:'法務部はリース契約書の作成・管理から、契約トラブルの解決、法的リスクの管理まで幅広く担当します。'},
+{ch:7,q:'リース会社で「資産管理部」が重視される理由として正しいのは？',
+ c:['サーキュラーエコノミーへの対応と物件の適切な再利用・廃棄管理のため','土地の売買のため','株式の運用のため','特許管理のため'],a:0,
+ e:'大量のリース物件を管理するリース会社にとって、資産管理部は物件の現状把握から再利用・廃棄まで一貫して管理する重要な部門です。'},
+
+// ===== Ch8 =====
+{ch:8,q:'日本のリース会社はおよそ何社あるか？',
+ c:['200社以上','50社以下','500社以上','約100社'],a:0,
+ e:'日本には200社以上のリース会社があります。最盛期には400社以上に達したといわれ、現在も多くの会社が活動しています。'},
+{ch:8,q:'日本初のリース会社「リース・インターナショナル」が設立されたのはいつか？',
+ c:['1963年','1952年','1970年','1985年'],a:0,
+ e:'1963年に設立されたリース・インターナショナル（現オリックス）が日本初のリース会社です。主だった金融機関・商社・メーカーが出資しました。'},
+{ch:8,q:'リース会社の主な出自（ルーツ）として代表的なものは？',
+ c:['メーカー系・金融機関系・商社系','不動産会社系・保険会社系・証券会社系','政府系・農協系・信用金庫系','外資系・ベンチャー系・大学発'],a:0,
+ e:'リース会社のルーツは①メーカー系（製造の知見）②金融機関系（融資の知見）③商社系（ビジネスマッチング）の3系統が代表的です。'},
+{ch:8,q:'オリックスにおいて、リース・金融関連事業が占める割合はどれくらいか？',
+ c:['約2割','約8割','約5割','約1割'],a:0,
+ e:'オリックスはリース会社から出発しましたが、現在はリース・金融関連事業が全体の約2割にとどまり、不動産・投資・保険など多様な事業を展開しています。'},
+{ch:8,q:'リース会社の脱リースが進む中、各社が取り組んでいることは？',
+ c:['リース以外の新規事業開拓・社名変更など事業の多角化','リース事業への集中','規模の縮小','海外撤退'],a:0,
+ e:'リース離れに対応するため、各社はリース以外の金融・不動産・環境・海外事業などへ多角化し、社名からも「リース」を外す動きが相次いでいます。'},
+{ch:8,q:'リース設備投資額が民間設備投資と連動しなくなった転換点はいつ頃か？',
+ c:['2010年頃','1991年（バブル崩壊時）','2020年（コロナ禍）','2000年（ITバブル崩壊）'],a:0,
+ e:'2010年頃から製造業が回復して設備投資が増えても、リース会計基準の改正でオフバランスのメリットが消え、大企業のリース離れが始まり連動しなくなりました。'},
+{ch:8,q:'金融機関をルーツとするリース会社の強みとして正しいのは？',
+ c:['豊富な資金調達力と与信管理のノウハウ','ものづくりの知見','多様な商品仕入れルート','海外ネットワーク'],a:0,
+ e:'銀行系・信金系などをルーツとするリース会社は、融資で培った与信管理能力と低コストの資金調達力を強みとしています。'},
+{ch:8,q:'地方銀行がリース事業を展開する主な理由は？',
+ c:['地方創生ニーズへの対応と地域中小企業の設備投資支援','大企業向け融資が飽和したため','政府の義務化','リース会社の収益が銀行より高いため'],a:0,
+ e:'地方銀行は地元中小企業との密接な関係を活かし、設備導入を支援するリース事業を展開することで地域経済の活性化に貢献しています。'},
+
+// ===== Ch9 =====
+{ch:9,q:'リース業界で今最も注目される会計知識は？',
+ c:['新リース会計基準（2027年施行）','消費税の会計処理','連結決算','株主資本等変動計算書'],a:0,
+ e:'2027年4月施行の新リース会計基準は、ユーザー企業の決算に大きな影響を与えるため、リース担当者として理解しておく必須知識です。'},
+{ch:9,q:'税務上でリース取引として認められる条件「フルペイアウト」とは？',
+ c:['解約不能かつリース料総額が物件価額の90%以上','リース期間が3年以上','リース料が物件価額の50%未満','大企業のみが対象'],a:0,
+ e:'税務上のファイナンス・リース（フルペイアウト）は①解約不能（ノンキャンセラブル）②リース料総額が物件の取得価額の90%以上の両方を満たすものです。'},
+{ch:9,q:'リース税制における「大企業」の定義として正しいのは？',
+ c:['資本金5億円以上または負債総額200億円以上の株式会社','従業員1000人以上','売上高100億円以上','上場企業すべて'],a:0,
+ e:'リース税制では「資本金5億円以上または負債総額200億円以上の株式会社」が大企業と定義されます。大企業と中小企業ではリースの税務処理が異なります。'},
+{ch:9,q:'法定耐用年数が10年未満の資産を税務上のリースにするためのリース期間の下限は？',
+ c:['法定耐用年数の70%以上','法定耐用年数の50%以上','法定耐用年数の80%以上','法定耐用年数の60%以上'],a:0,
+ e:'法定耐用年数10年未満の資産は、リース期間を耐用年数の70%（端数切捨）以上に設定することで税務上のリース取引として認められます。'},
+{ch:9,q:'リース業界でコンサルティングスキルが重要な理由は？',
+ c:['ユーザーの経営課題を見つけて最適な解決策を提案するため','財務諸表を代わりに作成するため','税務申告を代行するため','新入社員の研修のため'],a:0,
+ e:'単にモノを貸すだけでなく、ユーザーの業務課題を理解し、最適なリース商品や付帯サービスを組み合わせて提案するコンサルティング力が差別化になります。'},
+{ch:9,q:'担当業界に関する知識が必要な理由として正しいのは？',
+ c:['業界を知らなければユーザーの悩みを理解できず的確な提案ができないため','業界資格がリース会社への就職に必須だから','法律で業界知識の習得が義務付けられているから','担当業界の商品を自分で販売するため'],a:0,
+ e:'専門営業で医師と対等に話すには医療知識が必要なように、担当業界の専門知識がなければ、ユーザーの信頼を得た提案はできません。'},
+{ch:9,q:'動産保険の知識がリース担当者に必要な理由は？',
+ c:['自然災害・盗難・事故などからリース物件を守るための保険対応のため','生命保険の販売のため','不動産投資リスク管理のため','ユーザーの健康保険管理のため'],a:0,
+ e:'リース物件に火災・水害・盗難・事故が起きた場合の動産保険（動産総合保険）について、リース担当者は正しく説明できる知識が求められます。'},
+{ch:9,q:'資産管理の知識がリース会社で重要な理由は？',
+ c:['環境問題への取り組みとサーキュラーエコノミーの実践に直結するから','不動産売買のため','株式運用のため','特許管理のため'],a:0,
+ e:'リース物件の廃棄・再利用・リサイクルまでを適切に管理することが、環境負荷の軽減とサーキュラーエコノミーの実現につながります。'},
+
+// ===== Ch10 =====
+{ch:10,q:'リース業界が狙う「4大市場」に含まれないのはどれか？',
+ c:['仮想通貨市場','個人リース市場','新興国市場','メンテナンス・リース市場'],a:0,
+ e:'リース業界が狙う4大市場は「新興国市場」「メンテナンス・リース」「個人リース」「貸し出し方法の多様化」などとされており、仮想通貨市場は含まれません。'},
+{ch:10,q:'2022〜2023年のリース取引伸び率が最も高かった国はどこか？',
+ c:['アルゼンチン（388%）','ブラジル（36%）','インド（23.57%）','中国（12.5%）'],a:0,
+ e:'アルゼンチンはインフレで国内資金が不足し、リース需要が急増。2022〜2023年の伸び率は388%に達しました。'},
+{ch:10,q:'日本の2022〜2023年のリース取引の伸び率はおよそ何%か？',
+ c:['10.2%','36%','5%未満','20%'],a:0,
+ e:'日本の伸び率は10.2%で、新興国（中国12.5%・ブラジル36%・アルゼンチン388%）と比べると低い水準にあります。'},
+{ch:10,q:'メンテナンス・リースへの期待が高い理由として正しいのは？',
+ c:['付加サービスを差別化の武器にできるから','法律で義務化されているから','リースの中で最も安いから','新興国での需要が高いから'],a:0,
+ e:'車両・機器のメンテナンスまで含めたメンテナンス・リースは、単純なリースと差別化でき、顧客の囲い込みと収益向上につながります。'},
+{ch:10,q:'個人リースの可能性について正しいのは？',
+ c:['まだ普及しておらず、これから伸びる余地がある分野','日本では法律で禁止','個人リースはすでに飽和状態','リース業界には無関係'],a:0,
+ e:'自動車のカーリースを中心に個人向けリースは徐々に広まっていますが、まだ余地は大きく、今後の成長分野として注目されています。'},
+{ch:10,q:'リース業界で「貸し出し方法の多様化」として検討されているのは？',
+ c:['シェアリング・サブスクなど新しいスタイルの模索','長期一括払いの推進','物件購入への移行','リース期間の短縮のみ'],a:0,
+ e:'所有から利用へのシフトが進む中、シェアリングやサブスクなど新しい形態でモノを提供するスタイルの多様化がリース業界でも模索されています。'},
+{ch:10,q:'新興国でリースが急速に伸びている理由として正しいのは？',
+ c:['経済成長で設備投資需要が高まる一方、国内資金が不足しているため','法律上リースが義務化されているから','新興国にはリース会社が存在しないから','先進国からの強制があるから'],a:0,
+ e:'新興国は経済成長が著しく設備投資意欲が高い一方、国内の資金が不足しているため、資金を自前で調達できるリースが非常に有効な手段になります。'},
+{ch:10,q:'リース業界の将来像について最も適切なのは？',
+ c:['単純なモノの貸し出しを超え、総合金融・サービス業として進化する','デジタル化でリース業界は不要になる','リース業界は縮小一方','リース会社の数は増加し続ける'],a:0,
+ e:'リース業界は今や不動産・環境・海外・コンサルなど幅広い分野に進出する総合金融・サービス業へと変貌を遂げており、今後もその進化は続きます。'},
+];
+
+// ===== APP STATE =====
+const SUPABASE_URL = 'https://jqtmibcnllvbpwvzxlea.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_9ATK4N1-amyEWwJiCVgOJA_wpQ5Anka';
+const STORAGE_KEY  = 'leaseQuizRecords';
+const NICK_KEY     = 'unitDrillNickname'; // share with unit-drill
+
+let sbClient = null;
+try { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
+
+let selectedCh = 'mix';
+let selectedCnt = 10;
+let questions = [];
+let qIdx = 0;
+let answered = false;
+let score = 0;
+let chapStats = {}; // {ch: {right, total}}
+
+// ===== NICKNAME =====
+function getNickname() { return localStorage.getItem(NICK_KEY) || ''; }
+function updateNicknameBar() {
+  const el = document.getElementById('nicknameDisplay');
+  if (el) el.textContent = getNickname() || '（未設定）';
+}
+function showNicknameModal(isChange) {
+  const inp = document.getElementById('nicknameInput');
+  inp.value = isChange ? getNickname() : '';
+  document.getElementById('nicknameOverlay').classList.remove('hidden');
+  setTimeout(() => inp.focus(), 50);
+}
+function confirmNickname() {
+  const name = document.getElementById('nicknameInput').value.trim();
+  if (!name) { document.getElementById('nicknameInput').focus(); return; }
+  localStorage.setItem(NICK_KEY, name);
+  document.getElementById('nicknameOverlay').classList.add('hidden');
+  updateNicknameBar();
+}
+
+// ===== SCREEN =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+  if (id === 'graph') renderGraph();
+}
+
+// ===== TITLE SETUP =====
+document.addEventListener('DOMContentLoaded', () => {
+  updateNicknameBar();
+  if (!getNickname()) showNicknameModal(false);
+
+  // Chapter buttons
+  document.getElementById('chGrid').addEventListener('click', e => {
+    const btn = e.target.closest('.ch-btn');
+    if (!btn) return;
+    selectedCh = btn.dataset.ch;
+    document.querySelectorAll('.ch-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  // Count buttons
+  document.getElementById('countBar').addEventListener('click', e => {
+    const btn = e.target.closest('.count-btn');
+    if (!btn) return;
+    selectedCnt = btn.dataset.cnt === 'all' ? 'all' : parseInt(btn.dataset.cnt);
+    document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ===== QUIZ =====
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz() {
+  // Filter questions by chapter
+  let pool = selectedCh === 'mix'
+    ? [...ALL_QS]
+    : ALL_QS.filter(q => q.ch === parseInt(selectedCh));
+
+  pool = shuffle(pool);
+  if (selectedCnt !== 'all') pool = pool.slice(0, selectedCnt);
+  questions = pool;
+  qIdx = 0;
+  score = 0;
+  chapStats = {};
+  showScreen('quiz');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[qIdx];
+  answered = false;
+  const pct = Math.round((qIdx / questions.length) * 100);
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progLabel').textContent = `${qIdx + 1} / ${questions.length}問`;
+
+  const chap = CHAPTERS.find(c => c.id === q.ch);
+  const chapLabel = chap ? `Ch${q.ch}: ${chap.name}` : '';
+
+  // Shuffle choices with correct answer tracking
+  const idxMap = q.c.map((_, i) => i);
+  const shuffled = shuffle(idxMap);
+  const newCorrect = shuffled.indexOf(q.a);
+
+  document.getElementById('quizArea').innerHTML = `
+    <div class="card">
+      <div class="q-meta">${chapLabel}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="choices" id="choices">
+        ${shuffled.map((oi, ni) => `
+          <button class="choice-btn" data-ni="${ni}" data-oi="${oi}" onclick="selectChoice(this, ${ni}, ${newCorrect})">
+            ${['A','B','C','D'][ni]}. ${q.c[oi]}
+          </button>
+        `).join('')}
+      </div>
+      <div class="feedback" id="feedback">
+        <div class="mark" id="feedMark"></div>
+        <div class="exp" id="feedExp"></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('btnNext').classList.remove('show');
+}
+
+function selectChoice(btn, chosenNi, correctNi) {
+  if (answered) return;
+  answered = true;
+
+  const q = questions[qIdx];
+  const isCorrect = chosenNi === correctNi;
+
+  // Update chapStats
+  if (!chapStats[q.ch]) chapStats[q.ch] = { right: 0, total: 0 };
+  chapStats[q.ch].total++;
+  if (isCorrect) { score++; chapStats[q.ch].right++; }
+
+  // Style all buttons
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.classList.add('locked');
+    const ni = parseInt(b.dataset.ni);
+    if (ni === correctNi) b.classList.add(isCorrect && ni === chosenNi ? 'correct' : 'reveal');
+    else if (ni === chosenNi) b.classList.add('wrong');
+  });
+
+  // Show feedback
+  const fb = document.getElementById('feedback');
+  document.getElementById('feedMark').textContent = isCorrect ? '⭕ 正解！' : '❌ 不正解';
+  document.getElementById('feedMark').style.color = isCorrect ? '#2e7d32' : '#c62828';
+  document.getElementById('feedExp').textContent = q.e;
+  fb.classList.add('show');
+
+  document.getElementById('btnNext').classList.add('show');
+  document.getElementById('btnNext').textContent =
+    qIdx + 1 < questions.length ? '次の問題 →' : '結果を見る';
+}
+
+function nextQuestion() {
+  qIdx++;
+  if (qIdx < questions.length) {
+    renderQuestion();
+  } else {
+    showResult();
+  }
+  window.scrollTo(0, 0);
+}
+
+function quitQuiz() {
+  if (confirm('クイズをやめてタイトルに戻りますか？')) showScreen('title');
+}
+
+// ===== RESULT =====
+async function showResult() {
+  showScreen('result');
+  const pct = Math.round(score / questions.length * 100);
+  const msg = pct >= 90 ? '🎉 完璧！リース業界マスター！' :
+              pct >= 70 ? '👍 よくできました！' :
+              pct >= 50 ? '📚 もう少し復習しよう' : '💪 再挑戦してみよう';
+
+  // Chapter breakdown
+  const chapRows = Object.entries(chapStats).map(([ch, s]) => {
+    const chap = CHAPTERS.find(c => c.id === parseInt(ch));
+    const p = Math.round(s.right / s.total * 100);
+    const cls = p >= 70 ? 'hi' : p >= 50 ? 'mid' : 'lo';
+    return `<div class="chap-row">
+      <span>Ch${ch}: ${chap ? chap.name : ''}</span>
+      <span class="chap-score ${cls}">${s.right}/${s.total}問 (${p}%)</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('resultCard').innerHTML = `
+    <div class="result-score">${score} / ${questions.length}問正解</div>
+    <div class="result-pct">${pct}%</div>
+    <div class="result-msg">${msg}</div>
+    ${chapRows ? `<div class="result-chaps">${chapRows}</div>` : ''}
+    <div id="saveStatus"></div>
+    <div class="btn-row">
+      <button class="btn btn-retry" onclick="startQuiz()">🔄 もう一度</button>
+      <button class="btn btn-home" onclick="showScreen('title')">🏠 タイトルへ</button>
+    </div>
+  `;
+
+  const res = await saveRecord(pct);
+  const el = document.getElementById('saveStatus');
+  if (el) {
+    el.innerHTML = res.ok
+      ? '<span class="save-status save-ok">✓ 記録を保存しました</span>'
+      : `<span class="save-status save-fail">ローカルに保存しました</span>`;
+  }
+}
+
+// ===== SUPABASE / LOCAL SAVE =====
+function saveLocal(rec) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    arr.push(rec);
+    if (arr.length > 200) arr.splice(0, arr.length - 200);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch(e) {}
+}
+
+async function saveRecord(pct) {
+  const chLabel = selectedCh === 'mix' ? '全章ミックス' :
+    `Ch${selectedCh}: ${(CHAPTERS.find(c => c.id === parseInt(selectedCh)) || {}).name || ''}`;
+  const rec = {
+    date: new Date().toISOString(),
+    score: pct,
+    chapter: chLabel,
+    total_q: questions.length,
+  };
+  saveLocal(rec);
+  if (!getNickname()) return { ok: false };
+  if (!sbClient) return { ok: false };
+  try {
+    const { error } = await sbClient.from('lease_quiz_records').insert({
+      user_id:   getNickname(),
+      score:     pct,
+      chapter:   chLabel,
+      played_at: rec.date,
+      total_q:   questions.length,
+    });
+    return error ? { ok: false } : { ok: true };
+  } catch(e) { return { ok: false }; }
+}
+
+// ===== GRAPH =====
+function renderGraph() {
+  let records = [];
+  try { records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) {}
+  const area = document.getElementById('graphArea');
+
+  if (!records.length) {
+    area.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">まだ記録がありません</div>';
+    return;
+  }
+
+  const total = records.length;
+  const avg = Math.round(records.reduce((s, r) => s + r.score, 0) / total);
+  const best = Math.max(...records.map(r => r.score));
+
+  // Chapter stats
+  const byCh = {};
+  records.forEach(r => {
+    if (!byCh[r.chapter]) byCh[r.chapter] = { sum: 0, cnt: 0 };
+    byCh[r.chapter].sum += r.score;
+    byCh[r.chapter].cnt++;
+  });
+  const chRows = Object.entries(byCh).map(([ch, s]) => {
+    const a = Math.round(s.sum / s.cnt);
+    const cls = a >= 70 ? 'hi' : a >= 50 ? 'mid' : 'lo';
+    return `<tr><td>${ch}</td><td>${s.cnt}回</td>
+      <td class="hpct ${cls}">${a}%</td></tr>`;
+  }).join('');
+
+  // Recent 10
+  const recent = [...records].reverse().slice(0, 10);
+  const histRows = recent.map(r => {
+    const p = r.score;
+    const cls = p >= 70 ? 'hi' : p >= 50 ? 'mid' : 'lo';
+    const d = r.date ? new Date(r.date).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric'}) : '';
+    return `<tr>
+      <td>${d}</td>
+      <td style="font-size:.8rem">${r.chapter || ''}</td>
+      <td>${r.total_q}問</td>
+      <td class="hpct ${cls}">${p}%</td>
+    </tr>`;
+  }).join('');
+
+  area.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-val">${total}</div><div class="stat-label">プレイ回数</div></div>
+      <div class="stat-box"><div class="stat-val">${avg}%</div><div class="stat-label">平均正答率</div></div>
+      <div class="stat-box"><div class="stat-val">${best}%</div><div class="stat-label">最高正答率</div></div>
+    </div>
+    <div class="hist-card">
+      <div class="hist-title">チャプター別 平均正答率</div>
+      <table class="hist-table">
+        <thead><tr><th>チャプター</th><th>回数</th><th>平均</th></tr></thead>
+        <tbody>${chRows}</tbody>
+      </table>
+    </div>
+    <div class="hist-card">
+      <div class="hist-title">最近の記録</div>
+      <table class="hist-table">
+        <thead><tr><th>日付</th><th>チャプター</th><th>問数</th><th>正答率</th></tr></thead>
+        <tbody>${histRows}</tbody>
+      </table>
+      <button class="btn-clear" onclick="clearRecords()">記録を削除</button>
+    </div>
+  `;
+}
+
+function clearRecords() {
+  if (!confirm('記録をすべて削除しますか？')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  renderGraph();
+}
+</script>
+</body>
+</html>
