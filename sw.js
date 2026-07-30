@@ -1,4 +1,4 @@
-const CACHE = 'unit-v1';
+const CACHE = 'unit-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
