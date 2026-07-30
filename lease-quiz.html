@@ -45,15 +45,20 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
   transition:.15s;text-align:left;line-height:1.3;
   display:flex;align-items:center;gap:8px}
 .ch-btn-text{line-height:1.3;flex:1;min-width:0}
+.ch-todo-count{display:block;font-size:.72rem;font-weight:bold;color:#c62828;margin-top:1px}
+.ch-todo-count.done{color:#2e7d32}
 .ch-btn.active{background:#1a5f3e;color:#fff;border-color:#1a5f3e}
 .ch-btn.mix{grid-column:1/-1;font-size:.95rem;padding:12px;
   border-color:#7b1fa2;color:#7b1fa2;justify-content:center}
 .ch-btn.mix.active{background:#7b1fa2;border-color:#7b1fa2;color:#fff}
 
-/* Count bar */
-.count-bar{display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
-.count-btn{padding:9px 20px;border:2.5px solid #a0c8b0;border-radius:22px;
-  background:#fff;font-size:1rem;cursor:pointer;color:#1a5f3e;font-weight:bold;transition:.15s}
+/* Range bar (出題範囲) */
+.range-bar{display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:14px;flex-wrap:wrap}
+.range-label{font-size:.88rem;font-weight:bold;color:#555;white-space:nowrap}
+.count-bar{display:flex;gap:6px}
+.count-btn{padding:7px 18px;border:2px solid #a0c8b0;border-radius:20px;
+  background:#fff;font-size:.9rem;cursor:pointer;color:#1a5f3e;font-weight:bold;transition:.15s}
 .count-btn.active{background:#1a5f3e;color:#fff;border-color:#1a5f3e}
 
 /* Big buttons */
@@ -229,17 +234,18 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
     <button class="nickname-edit-btn" onclick="showNicknameModal(true)">✏️</button>
   </div>
 
+  <div class="range-bar">
+    <span class="range-label">出題範囲：</span>
+    <div class="count-bar" id="countBar">
+      <button class="count-btn active" data-cnt="all">全問</button>
+      <button class="count-btn" data-cnt="todo">未了・誤りのみ</button>
+    </div>
+  </div>
+
   <div class="section-label">📚 チャプターを選ぼう</div>
   <div class="ch-grid" id="chGrid"></div>
 
-  <div class="section-label">🔢 出題範囲</div>
-  <div class="count-bar" id="countBar">
-    <button class="count-btn active" data-cnt="all">全問</button>
-    <button class="count-btn" data-cnt="todo">未了・誤りのみ</button>
-  </div>
-
   <div class="title-btns">
-    <button class="title-btn btn-start" onclick="startQuiz()">▶ スタート</button>
     <button class="title-btn btn-graph" onclick="showScreen('graph')">📊 記録を見る</button>
   </div>
 </div>
@@ -717,22 +723,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!getNickname()) showNicknameModal(false);
   renderChGrid();
 
-  // Chapter buttons (delegated — works after renderChGrid replaces innerHTML)
-  document.getElementById('chGrid').addEventListener('click', e => {
-    const btn = e.target.closest('.ch-btn');
-    if (!btn) return;
-    selectedCh = btn.dataset.ch;
-    document.querySelectorAll('.ch-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  });
-
-  // Count buttons
+  // Count buttons — re-render grid to update todo counts
   document.getElementById('countBar').addEventListener('click', e => {
     const btn = e.target.closest('.count-btn');
     if (!btn) return;
-    selectedCnt = btn.dataset.cnt; // 'all' or 'todo'
+    selectedCnt = btn.dataset.cnt;
     document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    renderChGrid();
   });
 });
 
@@ -916,19 +914,38 @@ function chProgressDonut(correct, total, size) {
 
 function renderChGrid() {
   const best = getChapterBest();
+  const done = getCorrectQs();
+  const isTodo = selectedCnt === 'todo';
   const grid = document.getElementById('chGrid');
+
+  // Count remaining questions per chapter for todo mode
+  const todoCount = ch => ALL_QS.filter(q => q.ch === ch && !done.has(QS_IDX.get(q))).length;
+  const mixTodo = ALL_QS.filter(q => !done.has(QS_IDX.get(q))).length;
+
   const chapBtns = CHAPTERS.map((ch, i) => {
     const b = best[ch.id] || { correct: 0 };
-    const isActive = String(selectedCh) === String(ch.id);
-    return `<button class="ch-btn${isActive ? ' active' : ''}" data-ch="${ch.id}">
+    const remaining = todoCount(ch.id);
+    const sub = isTodo
+      ? `<span class="ch-todo-count${remaining === 0 ? ' done' : ''}">${remaining === 0 ? '✓ 完了' : `残 ${remaining}問`}</span>`
+      : '';
+    return `<button class="ch-btn" onclick="startQuizForCh(${ch.id})">
       ${chProgressDonut(b.correct, 10, 38)}
-      <div class="ch-btn-text">Ch${ch.id}<br>${CH_SHORT[i]}</div>
+      <div class="ch-btn-text">Ch${ch.id}: ${CH_SHORT[i]}${sub}</div>
     </button>`;
   }).join('');
+
+  const mixSub = isTodo
+    ? `<span class="ch-todo-count${mixTodo === 0 ? ' done' : ''}">${mixTodo === 0 ? '✓ 完了' : `残 ${mixTodo}問`}</span>`
+    : '';
   grid.innerHTML = `
-    <button class="ch-btn mix${selectedCh === 'mix' ? ' active' : ''}" data-ch="mix">🎲 全章ミックス</button>
+    <button class="ch-btn mix" onclick="startQuizForCh('mix')">🎲 全章ミックス${mixSub}</button>
     ${chapBtns}
   `;
+}
+
+function startQuizForCh(chId) {
+  selectedCh = String(chId);
+  startQuiz();
 }
 
 // ===== RESULT =====
