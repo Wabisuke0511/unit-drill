@@ -125,16 +125,22 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
 .btn-next:active{transform:scale(.97)}
 
 /* Result */
-.result-card{text-align:center;padding:24px 18px}
-.result-score{font-size:2.5rem;font-weight:bold;color:#1a5f3e;margin:10px 0 4px}
-.result-pct{font-size:1.8rem;font-weight:bold;color:#e65100;margin-bottom:8px}
-.result-msg{font-size:1.1rem;color:#555;margin-bottom:16px}
-.result-chaps{text-align:left;margin:0 auto 16px;max-width:440px}
-.chap-row{display:flex;justify-content:space-between;padding:6px 0;
-  border-bottom:1px solid #eee;font-size:.9rem}
-.chap-row:last-child{border-bottom:none}
-.chap-score{font-weight:bold}
-.chap-score.hi{color:#2e7d32}.chap-score.mid{color:#f57c00}.chap-score.lo{color:#c62828}
+.result-card{text-align:center;padding:20px 16px}
+.result-hero{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:12px;flex-wrap:wrap}
+.result-texts{text-align:left}
+.result-score{font-size:1.5rem;font-weight:bold;color:#1a5f3e;margin-bottom:2px}
+.result-pct{font-size:2.4rem;font-weight:bold;color:#e65100;line-height:1}
+.result-pct-label{font-size:.82rem;color:#888;margin-top:2px}
+.result-msg{font-size:1rem;color:#555;margin-bottom:14px}
+.chap-donut-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  max-width:500px;margin:0 auto 14px;text-align:left}
+.chap-donut-card{background:#f8fbf8;border-radius:12px;padding:10px 12px;
+  display:flex;align-items:center;gap:10px}
+.chap-donut-info{flex:1;min-width:0}
+.chap-donut-name{font-size:.72rem;color:#666;margin-bottom:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chap-donut-score{font-size:.88rem;font-weight:bold}
+.chap-donut-score.hi{color:#2e7d32}.chap-donut-score.mid{color:#f57c00}.chap-donut-score.lo{color:#c62828}
 .btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
 .btn{padding:13px 24px;font-size:1rem;font-weight:bold;border:none;
   border-radius:13px;cursor:pointer;font-family:inherit;transition:.15s;color:#fff}
@@ -158,9 +164,30 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
   padding:12px 8px;text-align:center}
 .stat-val{font-size:1.6rem;font-weight:bold;color:#1a5f3e}
 .stat-label{font-size:.75rem;color:#666;margin-top:2px}
+
+/* Achievement card (graph screen) */
+.achieve-card{background:#fff;border-radius:16px;box-shadow:0 3px 14px rgba(0,0,0,.1);
+  padding:16px 20px;max-width:660px;margin:0 auto 14px;
+  display:flex;align-items:center;gap:20px}
+.achieve-info{flex:1}
+.achieve-title{font-size:.82rem;color:#888;font-weight:bold;margin-bottom:4px}
+.achieve-fraction{font-size:1.6rem;font-weight:bold;color:#1a5f3e;line-height:1}
+.achieve-sub{font-size:.82rem;color:#777;margin-top:4px}
+.achieve-pct{font-size:2rem;font-weight:bold;color:#e65100}
+
+/* Chapter donut grid (graph screen) */
 .hist-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08);
   padding:14px;max-width:660px;margin:0 auto 14px}
-.hist-title{font-size:.95rem;font-weight:bold;color:#1a5f3e;margin-bottom:8px}
+.hist-title{font-size:.95rem;font-weight:bold;color:#1a5f3e;margin-bottom:10px}
+.ch-donut-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ch-donut-item{display:flex;align-items:center;gap:10px;
+  background:#f8fbf8;border-radius:10px;padding:8px 10px}
+.ch-donut-texts{flex:1;min-width:0}
+.ch-donut-name{font-size:.72rem;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-donut-stat{font-size:.88rem;font-weight:bold;margin-top:1px}
+.ch-donut-stat.hi{color:#2e7d32}.ch-donut-stat.mid{color:#f57c00}.ch-donut-stat.lo{color:#c62828}
+.ch-donut-plays{font-size:.72rem;color:#aaa}
+
 .hist-table{width:100%;border-collapse:collapse;font-size:.85rem}
 .hist-table th{background:#f0f8f2;color:#555;padding:6px;text-align:left;
   border-bottom:2px solid #c8e6c9;white-space:nowrap}
@@ -179,6 +206,9 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
   .choice-btn{font-size:.92rem;padding:11px 12px}
   .title-name{font-size:1.5rem}
   .stat-grid{grid-template-columns:repeat(3,1fr)}
+  .chap-donut-grid{grid-template-columns:1fr}
+  .ch-donut-grid{grid-template-columns:1fr}
+  .result-hero{gap:12px}
 }
 </style>
 </head>
@@ -718,6 +748,34 @@ function quitQuiz() {
   if (confirm('クイズをやめてタイトルに戻りますか？')) showScreen('title');
 }
 
+// ===== DONUT SVG =====
+function donutSVG(correct, total, size, large) {
+  size = size || 56;
+  const pct = total > 0 ? correct / total : 0;
+  const r = large ? 36 : 20;
+  const sw = large ? 7 : 5.5;
+  const circ = 2 * Math.PI * r;
+  const filled = pct * circ;
+  const color = pct >= 0.7 ? '#2e7d32' : pct >= 0.5 ? '#f57c00' : '#c62828';
+  const bg = pct >= 0.7 ? '#c8e6c9' : pct >= 0.5 ? '#ffe0b2' : '#ffcdd2';
+  const cx = size / 2, cy = size / 2;
+  const fs1 = large ? 13 : 9;
+  const fs2 = large ? 9 : 7;
+  const y1 = large ? cy - 3 : cy - 2;
+  const y2 = large ? cy + 11 : cy + 7;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${bg}" stroke-width="${sw}"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
+      stroke-dasharray="${filled.toFixed(2)} ${circ.toFixed(2)}"
+      stroke-linecap="round"
+      transform="rotate(-90 ${cx} ${cy})"/>
+    <text x="${cx}" y="${y1}" text-anchor="middle" dominant-baseline="central"
+      font-size="${fs1}" font-weight="bold" fill="${color}" font-family="sans-serif">${Math.round(pct*100)}%</text>
+    <text x="${cx}" y="${y2}" text-anchor="middle"
+      font-size="${fs2}" fill="#888" font-family="sans-serif">${correct}/${total}問</text>
+  </svg>`;
+}
+
 // ===== RESULT =====
 async function showResult() {
   showScreen('result');
@@ -726,22 +784,31 @@ async function showResult() {
               pct >= 70 ? '👍 よくできました！' :
               pct >= 50 ? '📚 もう少し復習しよう' : '💪 再挑戦してみよう';
 
-  // Chapter breakdown
-  const chapRows = Object.entries(chapStats).map(([ch, s]) => {
+  // Chapter donut cards
+  const chapCards = Object.entries(chapStats).map(([ch, s]) => {
     const chap = CHAPTERS.find(c => c.id === parseInt(ch));
     const p = Math.round(s.right / s.total * 100);
     const cls = p >= 70 ? 'hi' : p >= 50 ? 'mid' : 'lo';
-    return `<div class="chap-row">
-      <span>Ch${ch}: ${chap ? chap.name : ''}</span>
-      <span class="chap-score ${cls}">${s.right}/${s.total}問 (${p}%)</span>
+    return `<div class="chap-donut-card">
+      ${donutSVG(s.right, s.total, 56)}
+      <div class="chap-donut-info">
+        <div class="chap-donut-name">Ch${ch}: ${chap ? chap.name : ''}</div>
+        <div class="chap-donut-score ${cls}">${s.right}/${s.total}問正解</div>
+      </div>
     </div>`;
   }).join('');
 
   document.getElementById('resultCard').innerHTML = `
-    <div class="result-score">${score} / ${questions.length}問正解</div>
-    <div class="result-pct">${pct}%</div>
+    <div class="result-hero">
+      ${donutSVG(score, questions.length, 110, true)}
+      <div class="result-texts">
+        <div class="result-score">${questions.length}問中 <strong>${score}問</strong> 正解</div>
+        <div class="result-pct">${pct}%</div>
+        <div class="result-pct-label">正答率</div>
+      </div>
+    </div>
     <div class="result-msg">${msg}</div>
-    ${chapRows ? `<div class="result-chaps">${chapRows}</div>` : ''}
+    ${chapCards ? `<div class="chap-donut-grid">${chapCards}</div>` : ''}
     <div id="saveStatus"></div>
     <div class="btn-row">
       <button class="btn btn-retry" onclick="startQuiz()">🔄 もう一度</button>
@@ -803,55 +870,74 @@ function renderGraph() {
     return;
   }
 
-  const total = records.length;
-  const avg = Math.round(records.reduce((s, r) => s + r.score, 0) / total);
+  // 累計正解数・総問数
+  let totalCorrect = 0, totalAttempted = 0;
+  records.forEach(r => {
+    totalAttempted += r.total_q || 0;
+    totalCorrect += Math.round((r.score / 100) * (r.total_q || 0));
+  });
+  const overallPct = totalAttempted ? Math.round(totalCorrect / totalAttempted * 100) : 0;
+  const playCount = records.length;
   const best = Math.max(...records.map(r => r.score));
 
-  // Chapter stats
+  // チャプター別集計（正解数・総問数・プレイ回数）
   const byCh = {};
   records.forEach(r => {
-    if (!byCh[r.chapter]) byCh[r.chapter] = { sum: 0, cnt: 0 };
-    byCh[r.chapter].sum += r.score;
-    byCh[r.chapter].cnt++;
+    const key = r.chapter || '不明';
+    if (!byCh[key]) byCh[key] = { correct: 0, total: 0, cnt: 0 };
+    byCh[key].total  += r.total_q || 0;
+    byCh[key].correct += Math.round((r.score / 100) * (r.total_q || 0));
+    byCh[key].cnt++;
   });
-  const chRows = Object.entries(byCh).map(([ch, s]) => {
-    const a = Math.round(s.sum / s.cnt);
-    const cls = a >= 70 ? 'hi' : a >= 50 ? 'mid' : 'lo';
-    return `<tr><td>${ch}</td><td>${s.cnt}回</td>
-      <td class="hpct ${cls}">${a}%</td></tr>`;
+
+  const chDonutItems = Object.entries(byCh).map(([ch, s]) => {
+    const p = s.total ? Math.round(s.correct / s.total * 100) : 0;
+    const cls = p >= 70 ? 'hi' : p >= 50 ? 'mid' : 'lo';
+    return `<div class="ch-donut-item">
+      ${donutSVG(s.correct, s.total, 58)}
+      <div class="ch-donut-texts">
+        <div class="ch-donut-name">${ch}</div>
+        <div class="ch-donut-stat ${cls}">${s.correct}/${s.total}問正解</div>
+        <div class="ch-donut-plays">${s.cnt}回プレイ</div>
+      </div>
+    </div>`;
   }).join('');
 
-  // Recent 10
+  // 最近10件
   const recent = [...records].reverse().slice(0, 10);
   const histRows = recent.map(r => {
     const p = r.score;
     const cls = p >= 70 ? 'hi' : p >= 50 ? 'mid' : 'lo';
     const d = r.date ? new Date(r.date).toLocaleDateString('ja-JP', {month:'numeric',day:'numeric'}) : '';
+    const correct = Math.round((p / 100) * (r.total_q || 0));
     return `<tr>
       <td>${d}</td>
-      <td style="font-size:.8rem">${r.chapter || ''}</td>
-      <td>${r.total_q}問</td>
-      <td class="hpct ${cls}">${p}%</td>
+      <td style="font-size:.78rem;color:#555">${(r.chapter||'').replace(/^Ch\d+:\s*/,'')}</td>
+      <td style="text-align:center">${correct}/${r.total_q}</td>
+      <td class="hpct ${cls}" style="text-align:center">${p}%</td>
     </tr>`;
   }).join('');
 
   area.innerHTML = `
-    <div class="stat-grid">
-      <div class="stat-box"><div class="stat-val">${total}</div><div class="stat-label">プレイ回数</div></div>
-      <div class="stat-box"><div class="stat-val">${avg}%</div><div class="stat-label">平均正答率</div></div>
-      <div class="stat-box"><div class="stat-val">${best}%</div><div class="stat-label">最高正答率</div></div>
+    <div class="achieve-card">
+      ${donutSVG(totalCorrect, totalAttempted, 100, true)}
+      <div class="achieve-info">
+        <div class="achieve-title">累計 達成率</div>
+        <div class="achieve-pct">${overallPct}%</div>
+        <div class="achieve-fraction">${totalCorrect} / ${totalAttempted}問 正解</div>
+        <div class="achieve-sub">全${playCount}回プレイ・最高 ${best}%</div>
+      </div>
     </div>
+
     <div class="hist-card">
-      <div class="hist-title">チャプター別 平均正答率</div>
-      <table class="hist-table">
-        <thead><tr><th>チャプター</th><th>回数</th><th>平均</th></tr></thead>
-        <tbody>${chRows}</tbody>
-      </table>
+      <div class="hist-title">📊 チャプター別 正答率</div>
+      <div class="ch-donut-grid">${chDonutItems}</div>
     </div>
+
     <div class="hist-card">
-      <div class="hist-title">最近の記録</div>
+      <div class="hist-title">🕐 最近の記録</div>
       <table class="hist-table">
-        <thead><tr><th>日付</th><th>チャプター</th><th>問数</th><th>正答率</th></tr></thead>
+        <thead><tr><th>日付</th><th>チャプター</th><th>正解数</th><th>正答率</th></tr></thead>
         <tbody>${histRows}</tbody>
       </table>
       <button class="btn-clear" onclick="clearRecords()">記録を削除</button>
