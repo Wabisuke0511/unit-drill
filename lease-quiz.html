@@ -675,10 +675,31 @@ function getIncompletePool(chFilter) {
   return base.filter(q => !done.has(QS_IDX.get(q)));
 }
 
+// Seed leaseCorrectQs from leaseChapterBest so historical data is reflected
+function seedCorrectQsFromBest() {
+  const best = getChapterBest();
+  if (!Object.keys(best).length) return;
+  const done = getCorrectQs();
+  let changed = false;
+  CHAPTERS.forEach(ch => {
+    const target = best[ch.id]?.correct || 0;
+    if (!target) return;
+    const chIndices = ALL_QS.map((q, i) => i).filter(i => ALL_QS[i].ch === ch.id);
+    const alreadyDone = chIndices.filter(i => done.has(i)).length;
+    let toAdd = target - alreadyDone;
+    for (const i of chIndices) {
+      if (toAdd <= 0) break;
+      if (!done.has(i)) { done.add(i); toAdd--; changed = true; }
+    }
+  });
+  if (changed) localStorage.setItem(CORRECT_QS_KEY, JSON.stringify([...done]));
+}
+
 let sbClient = null;
 try { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
 
 buildQsIdx();
+seedCorrectQsFromBest();
 
 let selectedCh = 'mix';
 let selectedCnt = 'all';
@@ -913,23 +934,22 @@ function chProgressDonut(correct, total, size) {
 }
 
 function renderChGrid() {
-  const best = getChapterBest();
   const done = getCorrectQs();
   const isTodo = selectedCnt === 'todo';
   const grid = document.getElementById('chGrid');
 
-  // Count remaining questions per chapter for todo mode
-  const todoCount = ch => ALL_QS.filter(q => q.ch === ch && !done.has(QS_IDX.get(q))).length;
+  // Both donut and badge use leaseCorrectQs as single source
+  const correctForCh = chId => ALL_QS.filter(q => q.ch === chId && done.has(QS_IDX.get(q))).length;
   const mixTodo = ALL_QS.filter(q => !done.has(QS_IDX.get(q))).length;
 
   const chapBtns = CHAPTERS.map((ch, i) => {
-    const b = best[ch.id] || { correct: 0 };
-    const remaining = todoCount(ch.id);
+    const correct = correctForCh(ch.id);
+    const remaining = 10 - correct;
     const sub = isTodo
       ? `<span class="ch-todo-count${remaining === 0 ? ' done' : ''}">${remaining === 0 ? '✓ 完了' : `残 ${remaining}問`}</span>`
       : '';
     return `<button class="ch-btn" onclick="startQuizForCh(${ch.id})">
-      ${chProgressDonut(b.correct, 10, 38)}
+      ${chProgressDonut(correct, 10, 38)}
       <div class="ch-btn-text">Ch${ch.id}: ${CH_SHORT[i]}${sub}</div>
     </button>`;
   }).join('');
@@ -1095,9 +1115,9 @@ async function renderGraph() {
     return;
   }
 
-  // 達成率 = 各チャプターの最良正解数合計 / 全100問
-  const chBest = getChapterBest();
-  const totalCorrect = CHAPTERS.reduce((sum, ch) => sum + (chBest[ch.id]?.correct || 0), 0);
+  // 達成率 = leaseCorrectQs で正解済みの問題数 / 全100問
+  const correctQsSet = getCorrectQs();
+  const totalCorrect = ALL_QS.filter(q => correctQsSet.has(QS_IDX.get(q))).length;
   const totalAllQ = CHAPTERS.length * 10;
   const overallPct = Math.round(totalCorrect / totalAllQ * 100);
   const playCount = records.length;
