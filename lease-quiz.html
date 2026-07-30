@@ -232,11 +232,10 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
   <div class="section-label">📚 チャプターを選ぼう</div>
   <div class="ch-grid" id="chGrid"></div>
 
-  <div class="section-label">🔢 問題数</div>
+  <div class="section-label">🔢 出題範囲</div>
   <div class="count-bar" id="countBar">
-    <button class="count-btn" data-cnt="5">5問</button>
-    <button class="count-btn active" data-cnt="10">10問</button>
-    <button class="count-btn" data-cnt="all">全問</button>
+    <button class="count-btn active" data-cnt="all">全問</button>
+    <button class="count-btn" data-cnt="todo">未了・誤りのみ</button>
   </div>
 
   <div class="title-btns">
@@ -647,15 +646,36 @@ const SUPABASE_URL = 'https://jqtmibcnllvbpwvzxlea.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_9ATK4N1-amyEWwJiCVgOJA_wpQ5Anka';
 const STORAGE_KEY  = 'leaseQuizRecords';
 const NICK_KEY     = 'unitDrillNickname'; // share with unit-drill
-const CH_BEST_KEY  = 'leaseChapterBest';
+const CH_BEST_KEY    = 'leaseChapterBest';
+const CORRECT_QS_KEY = 'leaseCorrectQs';
 const CH_SHORT = ['新リース会計基準','最新動向','基礎知識','ビジネスモデル',
   '利用される業界','リース発サービス','仕事と組織','業界の全体像','知識・スキル','課題と展望'];
+
+// Map each question object → its index in ALL_QS (defined after ALL_QS)
+let QS_IDX;
+function buildQsIdx() { QS_IDX = new Map(ALL_QS.map((q, i) => [q, i])); }
+
+function getCorrectQs() {
+  try { return new Set(JSON.parse(localStorage.getItem(CORRECT_QS_KEY) || '[]')); } catch(e) { return new Set(); }
+}
+function markQuestionCorrect(q) {
+  const s = getCorrectQs();
+  s.add(QS_IDX.get(q));
+  localStorage.setItem(CORRECT_QS_KEY, JSON.stringify([...s]));
+}
+function getIncompletePool(chFilter) {
+  const done = getCorrectQs();
+  const base = chFilter === 'mix' ? ALL_QS : ALL_QS.filter(q => q.ch === parseInt(chFilter));
+  return base.filter(q => !done.has(QS_IDX.get(q)));
+}
 
 let sbClient = null;
 try { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
 
+buildQsIdx();
+
 let selectedCh = 'mix';
-let selectedCnt = 10;
+let selectedCnt = 'all';
 let questions = [];
 let qIdx = 0;
 let answered = false;
@@ -710,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('countBar').addEventListener('click', e => {
     const btn = e.target.closest('.count-btn');
     if (!btn) return;
-    selectedCnt = btn.dataset.cnt === 'all' ? 'all' : parseInt(btn.dataset.cnt);
+    selectedCnt = btn.dataset.cnt; // 'all' or 'todo'
     document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   });
@@ -727,13 +747,19 @@ function shuffle(arr) {
 }
 
 function startQuiz() {
-  // Filter questions by chapter
-  let pool = selectedCh === 'mix'
-    ? [...ALL_QS]
-    : ALL_QS.filter(q => q.ch === parseInt(selectedCh));
-
-  pool = shuffle(pool);
-  if (selectedCnt !== 'all') pool = pool.slice(0, selectedCnt);
+  let pool;
+  if (selectedCnt === 'todo') {
+    pool = shuffle(getIncompletePool(selectedCh));
+    if (!pool.length) {
+      const label = selectedCh === 'mix' ? '全問題' : `Ch${selectedCh}`;
+      alert(`🎉 ${label}の未了・誤り問題はありません！すべて正解済みです。`);
+      return;
+    }
+  } else {
+    pool = shuffle(selectedCh === 'mix'
+      ? [...ALL_QS]
+      : ALL_QS.filter(q => q.ch === parseInt(selectedCh)));
+  }
   questions = pool;
   qIdx = 0;
   score = 0;
@@ -787,7 +813,7 @@ function selectChoice(btn, chosenNi, correctNi) {
   // Update chapStats
   if (!chapStats[q.ch]) chapStats[q.ch] = { right: 0, total: 0 };
   chapStats[q.ch].total++;
-  if (isCorrect) { score++; chapStats[q.ch].right++; }
+  if (isCorrect) { score++; chapStats[q.ch].right++; markQuestionCorrect(q); }
 
   // Style all buttons
   document.querySelectorAll('.choice-btn').forEach(b => {
@@ -1126,8 +1152,10 @@ async function renderGraph() {
 }
 
 function clearRecords() {
-  if (!confirm('記録をすべて削除しますか？')) return;
+  if (!confirm('記録をすべて削除しますか？\n（正解済みフラグもリセットされます）')) return;
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(CORRECT_QS_KEY);
+  localStorage.removeItem(CH_BEST_KEY);
   renderGraph();
 }
 </script>
