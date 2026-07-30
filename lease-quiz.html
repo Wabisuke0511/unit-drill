@@ -40,12 +40,14 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
 /* Chapter grid */
 .ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;
   max-width:480px;margin:0 auto 18px}
-.ch-btn{padding:10px 6px;border:2.5px solid #a0c8b0;border-radius:14px;
+.ch-btn{padding:8px 10px;border:2.5px solid #a0c8b0;border-radius:14px;
   background:#fff;font-size:.82rem;cursor:pointer;color:#1a5f3e;font-weight:bold;
-  transition:.15s;text-align:center;line-height:1.3}
+  transition:.15s;text-align:left;line-height:1.3;
+  display:flex;align-items:center;gap:8px}
+.ch-btn-text{line-height:1.3;flex:1;min-width:0}
 .ch-btn.active{background:#1a5f3e;color:#fff;border-color:#1a5f3e}
 .ch-btn.mix{grid-column:1/-1;font-size:.95rem;padding:12px;
-  border-color:#7b1fa2;color:#7b1fa2}
+  border-color:#7b1fa2;color:#7b1fa2;justify-content:center}
 .ch-btn.mix.active{background:#7b1fa2;border-color:#7b1fa2;color:#fff}
 
 /* Count bar */
@@ -228,19 +230,7 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
   </div>
 
   <div class="section-label">📚 チャプターを選ぼう</div>
-  <div class="ch-grid" id="chGrid">
-    <button class="ch-btn mix active" data-ch="mix">🎲 全章ミックス</button>
-    <button class="ch-btn" data-ch="1">Ch1<br>新リース会計基準</button>
-    <button class="ch-btn" data-ch="2">Ch2<br>リース業界の最新動向</button>
-    <button class="ch-btn" data-ch="3">Ch3<br>リースの基礎知識</button>
-    <button class="ch-btn" data-ch="4">Ch4<br>ビジネスモデル</button>
-    <button class="ch-btn" data-ch="5">Ch5<br>利用される業界</button>
-    <button class="ch-btn" data-ch="6">Ch6<br>リース発サービス</button>
-    <button class="ch-btn" data-ch="7">Ch7<br>仕事と組織</button>
-    <button class="ch-btn" data-ch="8">Ch8<br>業界の全体像</button>
-    <button class="ch-btn" data-ch="9">Ch9<br>必要な知識・スキル</button>
-    <button class="ch-btn" data-ch="10">Ch10<br>課題と展望</button>
-  </div>
+  <div class="ch-grid" id="chGrid"></div>
 
   <div class="section-label">🔢 問題数</div>
   <div class="count-bar" id="countBar">
@@ -570,6 +560,86 @@ const ALL_QS = [
 {ch:10,q:'リース業界の将来像について最も適切なのは？',
  c:['単純なモノの貸し出しを超え、総合金融・サービス業として進化する','デジタル化でリース業界は不要になる','リース業界は縮小一方','リース会社の数は増加し続ける'],a:0,
  e:'リース業界は今や不動産・環境・海外・コンサルなど幅広い分野に進出する総合金融・サービス業へと変貌を遂げており、今後もその進化は続きます。'},
+
+// ===== Ch1 追加 =====
+{ch:1,q:'新リース会計基準における「使用権資産」の説明として正しいのは？',
+ c:['リース期間中に資産を使用する権利を資産計上したもの','所有権がある物件を資産計上したもの','リース会社が保有する物件','借主が担保として提供する資産'],a:0,
+ e:'新リース会計基準では、リース取引が認識された場合に「使用権資産」と「リース負債」を貸借対照表に計上します。使用権資産はその名の通り、使用する権利を資産化したものです。'},
+{ch:1,q:'リース会計上「利子率」が必要になる主な場面はどれか？',
+ c:['リース負債の現在価値を計算するとき','リース料の支払い総額を計算するとき','リース期間の長さを決めるとき','物件の購入価格を算定するとき'],a:0,
+ e:'リース負債は将来のリース料を現在価値に割り引いて計上します。その際にリース暗示利子率（または追加借入利子率）が必要になります。'},
+
+// ===== Ch2 追加 =====
+{ch:2,q:'リース業界が「SDGs」と連携できる主な理由として正しいのは？',
+ c:['省エネ設備の普及や資源循環への貢献を通じてSDGs達成を支援できるから','SDGsバッジを取得できるから','政府からの補助金を得られるから','社員の研修制度として活用できるから'],a:0,
+ e:'リース業界は省エネ設備の導入支援・物件回収によるリサイクルなどを通じて、SDGsの「エネルギー」「つくる責任・つかう責任」などの目標達成に貢献できます。'},
+{ch:2,q:'近年リース業界の取扱高が伸びている主な分野として正しいのは？',
+ c:['再生可能エネルギー・医療・航空機など','家庭用電化製品','食品・飲料設備','農地・森林'],a:0,
+ e:'太陽光発電設備・医療機器・航空機など高額設備の分野でリース需要が伸びています。これらは初期投資が大きく、リースのメリットが出やすい分野です。'},
+
+// ===== Ch3 追加 =====
+{ch:3,q:'「クロスボーダー・リース」とはどういう意味か？',
+ c:['国をまたぐ国際的なリース取引','異なる業界間のリース契約','複数の物件をまとめたリース','銀行とリース会社が共同で提供するリース'],a:0,
+ e:'クロスボーダー・リースとは日本のリース会社が外国企業にリースを提供する、または外国企業が日本企業に提供するなど、国境を越えたリース取引のことです。'},
+{ch:3,q:'リースと割賦販売（分割払い購入）の最大の違いは？',
+ c:['リースは物件の所有権がリース会社のまま、割賦販売は最終的に所有権が移転する','リースの方が支払総額が必ず安い','割賦販売は中古品に限られる','リースは個人のみが利用できる'],a:0,
+ e:'割賦販売は分割払いで最終的に所有権が買主に移転しますが、リースは契約期間中も所有権はリース会社にあります。この違いが会計処理や税務上の扱いに影響します。'},
+
+// ===== Ch4 追加 =====
+{ch:4,q:'ファイナンス・リースで「フルペイアウト」が求められる理由は？',
+ c:['リース会社がリース物件の取得費用を確実に回収できるようにするため','リース料の計算を簡単にするため','利用者の利益を守るため','税務上の優遇措置を受けるため'],a:0,
+ e:'フルペイアウトとは、リース期間中に支払われるリース料の総額が物件の取得価額をほぼ全額カバーすることです。これによりリース会社は元本を確実に回収できます。'},
+{ch:4,q:'リース会社が顧客に「節税効果」をアピールできる主な理由は？',
+ c:['リース料は全額経費として損金算入できるため','リース物件に固定資産税がかからないため','消費税が免除されるため','社会保険料が削減されるため'],a:0,
+ e:'ファイナンス・リースの場合、税務上は元本と利子に分けて処理しますが、オペレーティング・リースはリース料全額をその期の経費として計上できるため節税効果があります。'},
+
+// ===== Ch5 追加 =====
+{ch:5,q:'カーリース（自動車リース）が企業・個人に広がっている主な理由は？',
+ c:['初期費用不要・維持費込みで月額固定の便利さが支持されているため','購入より必ず安いため','法律でリースが義務付けられているため','燃費が改善されるため'],a:0,
+ e:'カーリースでは車両代・税金・保険・メンテナンス費をすべて月額に含めることができ、予算管理が簡単になります。個人向けカーリースも近年急速に普及しています。'},
+{ch:5,q:'病院・クリニックがリースを活用する主なメリットは？',
+ c:['高額医療機器を初期投資なしに導入でき、機器更新もしやすい','リース料が保険診療報酬として認められる','医療スタッフの研修費用が削減できる','薬品の調達コストが下がる'],a:0,
+ e:'MRIやCTなど医療機器は数千万〜数億円と高額で、技術革新も速いです。リースなら初期費用を抑えつつ最新機器を導入でき、期間終了後の更新も容易です。'},
+
+// ===== Ch6 追加 =====
+{ch:6,q:'「リースバック」とはどのような取引か？',
+ c:['自社所有資産をリース会社に売却し、そのまま同じ物件をリースとして使い続ける仕組み','リース期間中に物件を買い取ること','リース会社が資産を買い取って別の顧客に貸し出すこと','リース契約を別の会社に譲渡すること'],a:0,
+ e:'リースバック（セール・アンド・リースバック）は企業が保有資産を売却して資金調達しながら、引き続き同じ資産を使い続けられる手法です。キャッシュフロー改善に有効です。'},
+{ch:6,q:'リース会社が提供する「ファイナンス機能」の幅として正しいのは？',
+ c:['ローン・割賦販売・ファクタリングなど多様な金融サービス','銀行と同様の預金業務','保険の販売のみ','株式の引受け'],a:0,
+ e:'リース会社は本来のリースに加え、ローン・割賦販売・ファクタリング（売掛債権の買い取り）など幅広い金融サービスを展開しており、総合金融会社化しています。'},
+
+// ===== Ch7 追加 =====
+{ch:7,q:'リース会社の「国際業務部門」が担う主な役割は？',
+ c:['海外法人・子会社の管理や外国企業とのクロスボーダー取引','国内の外国人顧客への対応','外国語研修の運営','輸出入手続きの代行'],a:0,
+ e:'大手リース会社はアジアを中心に海外拠点を持ち、現地法人の管理・外国企業との取引・クロスボーダー・リースを担う国際業務部門が重要な役割を担っています。'},
+{ch:7,q:'リース会社の営業職に求められる「提案営業」とはどういう意味か？',
+ c:['顧客のニーズや課題を把握し、最適なリースプランをカスタマイズして提案すること','リース料金の値引き交渉を主とする営業','既存顧客への定期訪問のみ','新規開拓だけを行う営業'],a:0,
+ e:'単にリース商品を売るのではなく、顧客の経営課題・財務状況・設備投資計画を把握し、リース・ローン・割賦など最適な調達方法を提案するのがリース営業の真髄です。'},
+
+// ===== Ch8 追加 =====
+{ch:8,q:'商社系リース会社の強みとして正しいのは？',
+ c:['商社の幅広いネットワークを活かした物件調達力・海外展開力','低金利での融資力','メーカー製品の独占販売権','個人向けローンの充実'],a:0,
+ e:'三菱UFJリースや住商リースなど商社系リース会社は、親会社の国内外ネットワーク・情報力・物件調達力を最大限に活用し、多様な業種・地域でビジネスを展開します。'},
+{ch:8,q:'リース業界の業界団体として正しいのは？',
+ c:['一般社団法人リース事業協会','日本リース連合会','全国リース組合連盟','日本金融リース協議会'],a:0,
+ e:'リース業界の業界団体は「一般社団法人リース事業協会」です。統計発表・法令対応・人材育成など業界横断的な活動を行っています。'},
+
+// ===== Ch9 追加 =====
+{ch:9,q:'リース営業が顧客に提供できる「コンサルティング価値」として正しいのは？',
+ c:['リース・ローン・購入などの比較分析で最適な調達方法を提案できる','会計処理をすべて代行できる','法律相談窓口として機能する','保険の加入を一括管理する'],a:0,
+ e:'リース営業担当者は会計・税務・金融の知識を活かし、顧客に対してリースが有利か購入が有利かを試算・提案できます。この「調達コンサルティング」がリース営業の付加価値です。'},
+{ch:9,q:'リース業界でグローバルに活躍するために特に重要なスキルは？',
+ c:['英語力と現地の法律・商習慣の理解','プログラミングスキルのみ','運転免許','医療知識'],a:0,
+ e:'海外拠点やクロスボーダー取引では英語でのコミュニケーション能力に加え、現地の法律・会計・税務・商慣行の理解が不可欠です。'},
+
+// ===== Ch10 追加 =====
+{ch:10,q:'リース業界の「グリーン化・脱炭素」への対応として正しいのは？',
+ c:['省エネ設備・再エネ設備のリース推進で企業の脱炭素を支援する','石炭・石油関連設備のリースに特化する','グリーン化は他業界の課題でリース業界には無関係','炭素税を代わりに支払う'],a:0,
+ e:'太陽光・風力など再生可能エネルギー設備や省エネ機器のリースを推進することで、リース業界は顧客企業のカーボンニュートラル実現を後押しする重要な役割を担っています。'},
+{ch:10,q:'今後のリース業界が求める人材像として正しいのは？',
+ c:['金融・会計・IT・環境など幅広い知識を持つ「総合金融サービスのプロ」','リース契約の処理だけできればよい','営業能力だけが重要で専門知識は不要','AIが代替するため人材育成は不要'],a:0,
+ e:'リース業界が総合金融・サービス業へと進化するにつれ、金融・法律・会計・環境・ITなど多様な専門知識を持ちながら顧客課題を解決できる人材が求められています。'},
 ];
 
 // ===== APP STATE =====
@@ -577,6 +647,9 @@ const SUPABASE_URL = 'https://jqtmibcnllvbpwvzxlea.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_9ATK4N1-amyEWwJiCVgOJA_wpQ5Anka';
 const STORAGE_KEY  = 'leaseQuizRecords';
 const NICK_KEY     = 'unitDrillNickname'; // share with unit-drill
+const CH_BEST_KEY  = 'leaseChapterBest';
+const CH_SHORT = ['新リース会計基準','最新動向','基礎知識','ビジネスモデル',
+  '利用される業界','リース発サービス','仕事と組織','業界の全体像','知識・スキル','課題と展望'];
 
 let sbClient = null;
 try { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
@@ -615,14 +688,16 @@ function showScreen(id) {
   document.getElementById('screen-' + id).classList.add('active');
   window.scrollTo(0, 0);
   if (id === 'graph') renderGraph();
+  if (id === 'title') renderChGrid();
 }
 
 // ===== TITLE SETUP =====
 document.addEventListener('DOMContentLoaded', () => {
   updateNicknameBar();
   if (!getNickname()) showNicknameModal(false);
+  renderChGrid();
 
-  // Chapter buttons
+  // Chapter buttons (delegated — works after renderChGrid replaces innerHTML)
   document.getElementById('chGrid').addEventListener('click', e => {
     const btn = e.target.closest('.ch-btn');
     if (!btn) return;
@@ -776,6 +851,60 @@ function donutSVG(correct, total, size, large) {
   </svg>`;
 }
 
+// ===== CHAPTER PROGRESS =====
+function getChapterBest() {
+  try { return JSON.parse(localStorage.getItem(CH_BEST_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function updateChapterBest(stats) {
+  const stored = getChapterBest();
+  Object.entries(stats).forEach(([ch, s]) => {
+    const id = parseInt(ch);
+    const normalized = s.total >= 10 ? s.right : Math.round(s.right / s.total * 10);
+    if (!stored[id] || normalized > (stored[id].correct || 0)) {
+      stored[id] = { correct: normalized };
+    }
+  });
+  localStorage.setItem(CH_BEST_KEY, JSON.stringify(stored));
+}
+
+function chProgressDonut(correct, total, size) {
+  const r = (size - 7) / 2;
+  const sw = 3.5;
+  const circ = 2 * Math.PI * r;
+  const pct = total > 0 ? correct / total : 0;
+  const filled = pct * circ;
+  const color = pct >= 0.7 ? '#2e7d32' : pct >= 0.5 ? '#f57c00' : pct > 0 ? '#c62828' : '#ccc';
+  const cx = size / 2, cy = size / 2;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="${sw}"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
+      stroke-dasharray="${filled.toFixed(2)} ${circ.toFixed(2)}"
+      stroke-linecap="round"
+      transform="rotate(-90 ${cx} ${cy})"/>
+    <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+      font-size="${Math.round(size * 0.28)}" font-weight="bold"
+      fill="currentColor" font-family="sans-serif">${correct}</text>
+  </svg>`;
+}
+
+function renderChGrid() {
+  const best = getChapterBest();
+  const grid = document.getElementById('chGrid');
+  const chapBtns = CHAPTERS.map((ch, i) => {
+    const b = best[ch.id] || { correct: 0 };
+    const isActive = String(selectedCh) === String(ch.id);
+    return `<button class="ch-btn${isActive ? ' active' : ''}" data-ch="${ch.id}">
+      ${chProgressDonut(b.correct, 10, 38)}
+      <div class="ch-btn-text">Ch${ch.id}<br>${CH_SHORT[i]}</div>
+    </button>`;
+  }).join('');
+  grid.innerHTML = `
+    <button class="ch-btn mix${selectedCh === 'mix' ? ' active' : ''}" data-ch="mix">🎲 全章ミックス</button>
+    ${chapBtns}
+  `;
+}
+
 // ===== RESULT =====
 async function showResult() {
   showScreen('result');
@@ -816,6 +945,7 @@ async function showResult() {
     </div>
   `;
 
+  updateChapterBest(chapStats);
   const res = await saveRecord(pct);
   const el = document.getElementById('saveStatus');
   if (el) {
@@ -870,13 +1000,11 @@ function renderGraph() {
     return;
   }
 
-  // 累計正解数・総問数
-  let totalCorrect = 0, totalAttempted = 0;
-  records.forEach(r => {
-    totalAttempted += r.total_q || 0;
-    totalCorrect += Math.round((r.score / 100) * (r.total_q || 0));
-  });
-  const overallPct = totalAttempted ? Math.round(totalCorrect / totalAttempted * 100) : 0;
+  // 達成率 = 各チャプターの最良正解数合計 / 全100問
+  const chBest = getChapterBest();
+  const totalCorrect = CHAPTERS.reduce((sum, ch) => sum + (chBest[ch.id]?.correct || 0), 0);
+  const totalAllQ = CHAPTERS.length * 10;
+  const overallPct = Math.round(totalCorrect / totalAllQ * 100);
   const playCount = records.length;
   const best = Math.max(...records.map(r => r.score));
 
@@ -920,11 +1048,11 @@ function renderGraph() {
 
   area.innerHTML = `
     <div class="achieve-card">
-      ${donutSVG(totalCorrect, totalAttempted, 100, true)}
+      ${donutSVG(totalCorrect, totalAllQ, 100, true)}
       <div class="achieve-info">
-        <div class="achieve-title">累計 達成率</div>
+        <div class="achieve-title">達成率（全${totalAllQ}問）</div>
         <div class="achieve-pct">${overallPct}%</div>
-        <div class="achieve-fraction">${totalCorrect} / ${totalAttempted}問 正解</div>
+        <div class="achieve-fraction">${totalCorrect} / ${totalAllQ}問 正解</div>
         <div class="achieve-sub">全${playCount}回プレイ・最高 ${best}%</div>
       </div>
     </div>
