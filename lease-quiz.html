@@ -990,10 +990,62 @@ async function saveRecord(pct) {
 }
 
 // ===== GRAPH =====
-function renderGraph() {
+async function renderGraph() {
+  const area = document.getElementById('graphArea');
+  area.innerHTML = '<div style="text-align:center;color:#aaa;padding:32px;">読み込み中...</div>';
+
+  // Load local records
   let records = [];
   try { records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) {}
-  const area = document.getElementById('graphArea');
+
+  // Fetch from Supabase and merge (so iPhone records appear on PC and vice versa)
+  if (sbClient && getNickname()) {
+    try {
+      const { data, error } = await sbClient
+        .from('lease_quiz_records')
+        .select('*')
+        .eq('user_id', getNickname())
+        .order('played_at', { ascending: true })
+        .limit(500);
+      if (!error && data && data.length) {
+        const sbRecs = data.map(r => ({
+          date: r.played_at,
+          score: r.score,
+          chapter: r.chapter,
+          total_q: r.total_q,
+        }));
+        // Merge: Supabase is source of truth; add local-only entries not yet uploaded
+        const sbDates = new Set(sbRecs.map(r => r.date));
+        const localOnly = records.filter(r => !sbDates.has(r.date));
+        records = [...sbRecs, ...localOnly]
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Sync merged set back to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(-200)));
+      }
+    } catch(e) {}
+  }
+
+  // Update chapterBest from merged records (chapter-specific plays)
+  {
+    const bestFromRecords = {};
+    records.forEach(r => {
+      const m = (r.chapter || '').match(/^Ch(\d+)/);
+      if (!m) return;
+      const chId = parseInt(m[1]);
+      const correct = Math.round((r.score / 100) * (r.total_q || 10));
+      const norm = (r.total_q || 10) >= 10 ? correct : Math.round(correct / (r.total_q || 10) * 10);
+      if (!bestFromRecords[chId] || norm > bestFromRecords[chId]) bestFromRecords[chId] = norm;
+    });
+    const stored = getChapterBest();
+    let changed = false;
+    Object.entries(bestFromRecords).forEach(([ch, correct]) => {
+      if (!stored[ch] || correct > (stored[ch].correct || 0)) {
+        stored[ch] = { correct };
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem(CH_BEST_KEY, JSON.stringify(stored));
+  }
 
   if (!records.length) {
     area.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">まだ記録がありません</div>';
