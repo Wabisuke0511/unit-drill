@@ -950,6 +950,8 @@ function showQuestion() {
     </div></div>`;
 
   document.getElementById('appArea').innerHTML = html;
+  // iOS Safari は同じIDの入力欄に前回の値を復元することがあるため明示クリア
+  document.querySelectorAll('.ans-input').forEach(inp => { inp.value = ''; });
 
   // Focus & Enter key
   if (q.isFuku) {
