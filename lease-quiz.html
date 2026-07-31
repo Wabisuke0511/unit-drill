@@ -5,16 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="リースクイズ">
+<!-- ↓↓ クイズごとに変更する箇所 ↓↓ -->
+<meta name="apple-mobile-web-app-title" content="リースクイズ"><!-- QUIZ_CONFIG.appName と合わせる -->
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1a5f3e">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1a5f3e"><!-- QUIZ_CONFIG.themeColor と合わせる -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png"><!-- クイズ専用アイコンに差し替え -->
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180x180.png">
 <link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152x152.png">
 <link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120x120.png">
 <link rel="apple-touch-icon" sizes="76x76" href="apple-touch-icon-76x76.png">
-<link rel="manifest" href="lease-quiz-manifest.json">
-<title>リース業界クイズ</title>
+<link rel="manifest" href="lease-quiz-manifest.json"><!-- クイズ専用 manifest に差し替え -->
+<title>リース業界クイズ</title><!-- QUIZ_CONFIG.appName と合わせる（JSで上書き済み）-->
+<!-- ↑↑ クイズごとに変更する箇所 ↑↑ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -291,21 +293,29 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
 </div>
 
 <script>
-// ===== QUIZ DATA =====
-const CHAPTERS = [
-  { id:1, name:'新リース会計基準の全貌' },
-  { id:2, name:'リース業界の最新動向' },
-  { id:3, name:'リースの基礎知識' },
-  { id:4, name:'リースのビジネスモデル' },
-  { id:5, name:'リースが利用される業界' },
-  { id:6, name:'リース業界から生まれたサービス' },
-  { id:7, name:'リース会社の仕事と組織' },
-  { id:8, name:'リース業界の全体像' },
-  { id:9, name:'リース業界で求められる知識・スキル' },
-  { id:10, name:'リース業界の課題と展望' },
-];
-
-const ALL_QS = [
+// ===== QUIZ CONFIG (クイズごとにここだけ書き換える) =====
+const QUIZ_CONFIG = {
+  appName:       'リース業界クイズ',
+  appSubtitle:   '「日本で一番やさしいリースの本」で理解を深めよう',
+  themeColor:    '#1a5f3e',
+  storagePrefix: 'lease',
+  nicknameKey:   'unitDrillNickname',
+  supabaseUrl:   'https://jqtmibcnllvbpwvzxlea.supabase.co',
+  supabaseKey:   'sb_publishable_9ATK4N1-amyEWwJiCVgOJA_wpQ5Anka',
+  supabaseTable: 'lease_quiz_records',
+  chapters: [
+    { id:1,  name:'新リース会計基準の全貌',           short:'新リース会計基準' },
+    { id:2,  name:'リース業界の最新動向',              short:'最新動向' },
+    { id:3,  name:'リースの基礎知識',                 short:'基礎知識' },
+    { id:4,  name:'リースのビジネスモデル',            short:'ビジネスモデル' },
+    { id:5,  name:'リースが利用される業界',            short:'利用される業界' },
+    { id:6,  name:'リース業界から生まれたサービス',    short:'リース発サービス' },
+    { id:7,  name:'リース会社の仕事と組織',            short:'仕事と組織' },
+    { id:8,  name:'リース業界の全体像',               short:'業界の全体像' },
+    { id:9,  name:'リース業界で求められる知識・スキル', short:'知識・スキル' },
+    { id:10, name:'リース業界の課題と展望',           short:'課題と展望' },
+  ],
+  questions: [
 // ===== Ch1 =====
 {ch:1,q:'新リース会計基準が施行されるのはいつか？',
  c:['2027年4月','2025年1月','2026年10月','2028年3月'],a:0,
@@ -645,17 +655,17 @@ const ALL_QS = [
 {ch:10,q:'今後のリース業界が求める人材像として正しいのは？',
  c:['金融・会計・IT・環境など幅広い知識を持つ「総合金融サービスのプロ」','リース契約の処理だけできればよい','営業能力だけが重要で専門知識は不要','AIが代替するため人材育成は不要'],a:0,
  e:'リース業界が総合金融・サービス業へと進化するにつれ、金融・法律・会計・環境・ITなど多様な専門知識を持ちながら顧客課題を解決できる人材が求められています。'},
-];
+  ],
+}; // ===== END OF QUIZ_CONFIG =====
 
-// ===== APP STATE =====
-const SUPABASE_URL = 'https://jqtmibcnllvbpwvzxlea.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_9ATK4N1-amyEWwJiCVgOJA_wpQ5Anka';
-const STORAGE_KEY  = 'leaseQuizRecords';
-const NICK_KEY     = 'unitDrillNickname'; // share with unit-drill
-const CH_BEST_KEY    = 'leaseChapterBest';
-const CORRECT_QS_KEY = 'leaseCorrectQs';
-const CH_SHORT = ['新リース会計基準','最新動向','基礎知識','ビジネスモデル',
-  '利用される業界','リース発サービス','仕事と組織','業界の全体像','知識・スキル','課題と展望'];
+// ===== ENGINE (ここより下は変更不要) =====
+const ALL_QS         = QUIZ_CONFIG.questions;
+const CHAPTERS       = QUIZ_CONFIG.chapters;
+const CH_SHORT       = QUIZ_CONFIG.chapters.map(c => c.short);
+const STORAGE_KEY    = QUIZ_CONFIG.storagePrefix + 'QuizRecords';
+const CH_BEST_KEY    = QUIZ_CONFIG.storagePrefix + 'ChapterBest';
+const CORRECT_QS_KEY = QUIZ_CONFIG.storagePrefix + 'CorrectQs';
+const NICK_KEY       = QUIZ_CONFIG.nicknameKey;
 
 // Map each question object → its index in ALL_QS (defined after ALL_QS)
 let QS_IDX;
@@ -696,10 +706,15 @@ function seedCorrectQsFromBest() {
 }
 
 let sbClient = null;
-try { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
+try { sbClient = supabase.createClient(QUIZ_CONFIG.supabaseUrl, QUIZ_CONFIG.supabaseKey); } catch(e) {}
 
 buildQsIdx();
 seedCorrectQsFromBest();
+document.title = QUIZ_CONFIG.appName;
+document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', QUIZ_CONFIG.appName);
+document.querySelector('meta[name="theme-color"]')?.setAttribute('content', QUIZ_CONFIG.themeColor);
+document.querySelector('.title-name').textContent = QUIZ_CONFIG.appName;
+document.querySelector('.title-sub').textContent  = QUIZ_CONFIG.appSubtitle;
 
 let selectedCh = 'mix';
 let selectedCnt = 'all';
@@ -1041,7 +1056,7 @@ async function saveRecord(pct) {
   if (!getNickname()) return { ok: false };
   if (!sbClient) return { ok: false };
   try {
-    const { error } = await sbClient.from('lease_quiz_records').insert({
+    const { error } = await sbClient.from(QUIZ_CONFIG.supabaseTable).insert({
       user_id:   getNickname(),
       score:     pct,
       chapter:   chLabel,
@@ -1065,7 +1080,7 @@ async function renderGraph() {
   if (sbClient && getNickname()) {
     try {
       const { data, error } = await sbClient
-        .from('lease_quiz_records')
+        .from(QUIZ_CONFIG.supabaseTable)
         .select('*')
         .eq('user_id', getNickname())
         .order('played_at', { ascending: true })
