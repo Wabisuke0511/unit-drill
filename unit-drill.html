@@ -195,6 +195,9 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
 /* ===== 中学受験モード ===== */
 .theme-btn-jk{border-color:#7b1fa2;color:#7b1fa2}
 .theme-btn-jk.active{background:#7b1fa2;border-color:#7b1fa2;color:#fff}
+/* ===== 御三家モード ===== */
+.theme-btn-gsk{border-color:#b71c1c;color:#b71c1c}
+.theme-btn-gsk.active{background:#b71c1c;border-color:#b71c1c;color:#fff}
 .q-text-sm{font-size:1rem;line-height:1.75}
 /* ===== Responsive ===== */
 @media(max-width:520px){
@@ -235,6 +238,7 @@ body{font-family:'Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN','Meiryo',
     <button class="theme-btn" data-theme="計算">計算</button>
     <button class="theme-btn" data-theme="覆面算">覆面算</button>
     <button class="theme-btn theme-btn-jk" data-theme="中学受験">🎓 中学受験</button>
+    <button class="theme-btn theme-btn-gsk" data-theme="御三家">🏆 御三家</button>
   </div>
 
   <div class="title-theme-label">問題数</div>
@@ -397,6 +401,8 @@ document.getElementById('qcountBar').addEventListener('click', e => {
 // ===== Utilities =====
 function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
 function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function lcm(a, b) { return a / gcd(a, b) * b; }
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = randInt(0, i);
@@ -854,6 +860,206 @@ function genJK_sanhensu() {
   };
 }
 
+// 倍数・約数 基本 (lv3)
+function genJK_baisu() {
+  const type = randInt(0, 1);
+  if (type === 0) {
+    const nums = [12, 18, 24, 30, 36, 48, 60, 72, 90, 100, 120];
+    const n = pick(nums);
+    let cnt = 0;
+    for (let i = 1; i <= n; i++) if (n % i === 0) cnt++;
+    return {
+      questionText: `<strong>${n}</strong> の約数は全部で何個ありますか。`,
+      answers: [String(cnt)], inputs: 1, level: 3, theme: '中学受験',
+    };
+  } else {
+    const d = pick([3, 4, 5, 6, 7, 8, 9]);
+    const maxN = pick([50, 60, 80, 100, 120]);
+    const cnt = Math.floor(maxN / d);
+    return {
+      questionText: `1から <strong>${maxN}</strong> までの整数のうち、<strong>${d}</strong> の倍数は何個ありますか。`,
+      answers: [String(cnt)], inputs: 1, level: 3, theme: '中学受験',
+    };
+  }
+}
+
+// LCM/GCD応用・公倍数の個数 (lv4)
+function genJK_lcm_app() {
+  const type = randInt(0, 2);
+  if (type === 0) {
+    let g, p, q;
+    do { g = pick([2, 3, 4, 6]); p = pick([2, 3, 4, 5, 7]); q = pick([3, 5, 7, 8, 9]); }
+    while (p === q || gcd(p, q) !== 1);
+    const a = g * p, b = g * q;
+    const askGcd = randInt(0, 1) === 0;
+    return {
+      questionText: `<strong>${a}</strong> と <strong>${b}</strong> の${askGcd ? '最大公約数' : '最小公倍数'}を求めなさい。`,
+      answers: [String(askGcd ? g : g * p * q)], inputs: 1, level: 4, theme: '中学受験',
+    };
+  } else if (type === 1) {
+    const a = pick([3, 4, 5, 6]);
+    const b = pick([4, 5, 6, 7, 8]);
+    if (a === b) return genJK_lcm_app();
+    const lab = lcm(a, b);
+    const maxN = pick([100, 120, 150, 200]);
+    const cnt = Math.floor(maxN / lab);
+    return {
+      questionText: `1から <strong>${maxN}</strong> までの整数のうち、<strong>${a}</strong> と <strong>${b}</strong> の公倍数は何個ありますか。`,
+      answers: [String(cnt)], inputs: 1, level: 4, theme: '中学受験',
+    };
+  } else {
+    let g, p, q;
+    do { g = pick([2, 3, 4, 6]); p = pick([2, 3, 5, 7]); q = pick([3, 4, 5, 7, 9]); }
+    while (p === q || gcd(p, q) !== 1);
+    const a = g * p, b = g * q, lab = g * p * q;
+    return {
+      questionText: `2つの数の最大公約数は <strong>${g}</strong>、最小公倍数は <strong>${lab}</strong> です。<br>一方の数が <strong>${a}</strong> のとき、もう一方の数はいくつですか。`,
+      answers: [String(b)], inputs: 1, level: 4, theme: '中学受験', longText: true,
+    };
+  }
+}
+
+// 等差数列 基本・第n項 (lv3)
+function genJK_tosachi1() {
+  const type = randInt(0, 1);
+  if (type === 0) {
+    const a = randInt(1, 10), d = randInt(2, 8), n = randInt(5, 15);
+    return {
+      questionText: `初項 <strong>${a}</strong>、公差 <strong>${d}</strong> の等差数列の第 <strong>${n}</strong> 項はいくつですか。`,
+      answers: [String(a + (n - 1) * d)], inputs: 1, level: 3, theme: '中学受験',
+    };
+  } else {
+    const a = randInt(1, 10), d = randInt(3, 9), n = randInt(5, 12);
+    const shown = [a, a + d, a + 2 * d, a + 3 * d];
+    return {
+      questionText: `数列 <strong>${shown.join('、')}、…</strong> の第 <strong>${n}</strong> 番目の数はいくつですか。`,
+      answers: [String(a + (n - 1) * d)], inputs: 1, level: 3, theme: '中学受験',
+    };
+  }
+}
+
+// 等差数列の和 (lv4)
+function genJK_tosachi2() {
+  const a = randInt(1, 8), d = randInt(2, 7), n = randInt(5, 15);
+  const last = a + (n - 1) * d;
+  const sum = n * (a + last) / 2;
+  return {
+    questionText: `初項 <strong>${a}</strong>、公差 <strong>${d}</strong> の等差数列の、第1項から第 <strong>${n}</strong> 項までの和を求めなさい。`,
+    answers: [String(sum)], inputs: 1, level: 4, theme: '中学受験',
+  };
+}
+
+// ===== 御三家 問題ジェネレーター =====
+
+// 余りの問題 (lv4)
+function genGSK_amari() {
+  const type = randInt(0, 1);
+  if (type === 0) {
+    const pairs = [{ a: 5, b: 7 }, { a: 4, b: 7 }, { a: 3, b: 8 }, { a: 5, b: 6 }, { a: 4, b: 9 }];
+    const { a, b } = pick(pairs);
+    const r1 = randInt(1, a - 1), r2 = randInt(1, b - 1);
+    let x = r1;
+    while (x % b !== r2) x += a;
+    return {
+      questionText: `ある整数を <strong>${a}</strong> で割ると <strong>${r1}</strong> 余り、<strong>${b}</strong> で割ると <strong>${r2}</strong> 余ります。<br>このような正の整数のうち、最も小さいものはいくつですか。`,
+      answers: [String(x)], inputs: 1, level: 4, theme: '御三家', longText: true,
+    };
+  } else {
+    const d = pick([4, 6, 7, 8, 9]), r = randInt(1, d - 1);
+    let largest = 999;
+    while (largest % d !== r) largest--;
+    let smallest = 100;
+    while (smallest % d !== r) smallest++;
+    const askLargest = randInt(0, 1) === 0;
+    return {
+      questionText: `<strong>${d}</strong> で割ると <strong>${r}</strong> 余る3桁の整数のうち、${askLargest ? '最も大きい' : '最も小さい'}ものはいくつですか。`,
+      answers: [String(askLargest ? largest : smallest)], inputs: 1, level: 4, theme: '御三家',
+    };
+  }
+}
+
+// 約数応用・素因数 (lv5)
+function genGSK_yakusu() {
+  const type = randInt(0, 2);
+  if (type === 0) {
+    const maxN = pick([50, 100, 200]);
+    return {
+      questionText: `1から <strong>${maxN}</strong> までの整数のうち、約数の個数が奇数個である整数は何個ありますか。`,
+      answers: [String(Math.floor(Math.sqrt(maxN)))], inputs: 1, level: 5, theme: '御三家',
+    };
+  } else if (type === 1) {
+    const n = pick([10, 15, 20, 25]);
+    let cnt = 0, p = 5;
+    while (p <= n) { cnt += Math.floor(n / p); p *= 5; }
+    return {
+      questionText: `<strong>${n}!</strong> を計算したとき、末尾に0は何個並びますか。`,
+      answers: [String(cnt)], inputs: 1, level: 5, theme: '御三家',
+    };
+  } else {
+    let g, p, q;
+    do { g = pick([2, 3, 4, 6, 12]); p = pick([2, 3, 5, 7]); q = pick([3, 4, 5, 7, 11]); }
+    while (p === q || gcd(p, q) !== 1);
+    const a = g * p, b = g * q, lab = g * p * q;
+    return {
+      questionText: `2つの自然数の最大公約数は <strong>${g}</strong>、最小公倍数は <strong>${lab}</strong> です。<br>2つの数の和を求めなさい。`,
+      answers: [String(a + b)], inputs: 1, level: 5, theme: '御三家', longText: true,
+    };
+  }
+}
+
+// 等差数列応用 (lv5)
+function genGSK_tosachi() {
+  const type = randInt(0, 2);
+  if (type === 0) {
+    const d = randInt(2, 9), a1 = randInt(1, 15);
+    const m = randInt(3, 8), n = randInt(m + 3, m + 8), k = randInt(n + 1, n + 5);
+    const am = a1 + (m - 1) * d, an = a1 + (n - 1) * d, ak = a1 + (k - 1) * d;
+    return {
+      questionText: `等差数列の第 <strong>${m}</strong> 項が <strong>${am}</strong>、第 <strong>${n}</strong> 項が <strong>${an}</strong> です。<br>第 <strong>${k}</strong> 項はいくつですか。`,
+      answers: [String(ak)], inputs: 1, level: 5, theme: '御三家', longText: true,
+    };
+  } else if (type === 1) {
+    const n = randInt(5, 20);
+    return {
+      questionText: `1から <strong>${2 * n - 1}</strong> までの奇数をすべて足すといくつになりますか。`,
+      answers: [String(n * n)], inputs: 1, level: 5, theme: '御三家',
+    };
+  } else {
+    const start = randInt(1, 20), count = randInt(5, 12);
+    const end = start + count - 1;
+    const sum = count * (start + end) / 2;
+    return {
+      questionText: `連続する <strong>${count}</strong> 個の整数の和が <strong>${sum}</strong> です。<br>最小の整数はいくつですか。`,
+      answers: [String(start)], inputs: 1, level: 5, theme: '御三家', longText: true,
+    };
+  }
+}
+
+// 整数と数列複合 (lv5)
+function genGSK_seisuuretsu() {
+  const type = randInt(0, 1);
+  if (type === 0) {
+    const a = pick([2, 3, 4, 5]), b = pick([3, 5, 6, 7]);
+    if (a === b) return genGSK_seisuuretsu();
+    const maxN = pick([60, 100, 120]);
+    const lab = lcm(a, b);
+    const total = Math.floor(maxN / a) + Math.floor(maxN / b) - Math.floor(maxN / lab);
+    return {
+      questionText: `1から <strong>${maxN}</strong> までの整数のうち、<strong>${a}</strong> の倍数または <strong>${b}</strong> の倍数は何個ありますか。`,
+      answers: [String(total)], inputs: 1, level: 5, theme: '御三家',
+    };
+  } else {
+    const patterns = [[1, 2, 3], [1, 2, 3, 4], [1, 1, 2], [2, 3, 1, 2, 3]];
+    const pat = pick(patterns);
+    const n = randInt(15, 30);
+    const ans = pat[(n - 1) % pat.length];
+    return {
+      questionText: `<strong>${pat.join('、')}、${pat.join('、')}、…</strong> と繰り返す数列の、第 <strong>${n}</strong> 番目の数はいくつですか。`,
+      answers: [String(ans)], inputs: 1, level: 5, theme: '御三家', longText: true,
+    };
+  }
+}
+
 // ===== Problem Pool =====
 const GENS = [
   { fn: genA1, level: 1, themes: ['ぜんぶ', '計算'] },
@@ -879,9 +1085,17 @@ const GENS = [
   { fn: genJK_wasa,      level: 2, themes: ['中学受験'] },
   { fn: genJK_tsurukame, level: 3, themes: ['中学受験'] },
   { fn: genJK_ueki,      level: 3, themes: ['中学受験'] },
+  { fn: genJK_baisu,     level: 3, themes: ['中学受験'] },
+  { fn: genJK_tosachi1,  level: 3, themes: ['中学受験'] },
   { fn: genJK_shoukyo,   level: 4, themes: ['中学受験'] },
   { fn: genJK_tabibito,  level: 4, themes: ['中学受験'] },
+  { fn: genJK_lcm_app,   level: 4, themes: ['中学受験'] },
+  { fn: genJK_tosachi2,  level: 4, themes: ['中学受験'] },
   { fn: genJK_sanhensu,  level: 5, themes: ['中学受験'] },
+  { fn: genGSK_amari,       level: 4, themes: ['御三家'] },
+  { fn: genGSK_yakusu,      level: 5, themes: ['御三家'] },
+  { fn: genGSK_tosachi,     level: 5, themes: ['御三家'] },
+  { fn: genGSK_seisuuretsu, level: 5, themes: ['御三家'] },
 ];
 
 function buildSet(theme, count) {
@@ -1183,8 +1397,8 @@ async function clearRecords() {
 }
 
 // ===== Graph =====
-const RADAR_THEMES = ['長さ', '重さ', 'かさ', '面積', '計算', '覆面算'];
-const THEME_COLORS = ['#1976d2', '#e64a19', '#00796b', '#6a1b9a', '#f57c00', '#c62828'];
+const RADAR_THEMES = ['長さ', '重さ', 'かさ', '面積', '計算', '覆面算', '中学受験', '御三家'];
+const THEME_COLORS = ['#1976d2', '#e64a19', '#00796b', '#6a1b9a', '#f57c00', '#c62828', '#7b1fa2', '#b71c1c'];
 let chartInstance = null;
 let radarInstance = null;
 let barInstance = null;
